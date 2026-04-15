@@ -1,0 +1,105 @@
+# ==============================================================================
+# .aiexclude — LuminaDev AI Shield
+#
+# Impede que ferramentas de IA (Claude Code, Gemini Code Assist) processem
+# arquivos sensíveis, binários e dados pesados desnecessários.
+# Gerado automaticamente pelo comando 'lumina-git' em cada repositório.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Credenciais e arquivos sensíveis
+# ------------------------------------------------------------------------------
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+config.php
+wp-config.php
+secrets.*
+*.secret
+.htpasswd
+auth.json
+
+# ------------------------------------------------------------------------------
+# Pastas de dados e dependências pesadas
+# ------------------------------------------------------------------------------
+/moodledata/
+/vendor/
+/node_modules/
+/bower_components/
+/.git/
+
+# ------------------------------------------------------------------------------
+# Build, cache e temporários
+# ------------------------------------------------------------------------------
+/dist/
+/build/
+/.cache/
+/.tmp/
+/tmp/
+*.log
+*.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ------------------------------------------------------------------------------
+# Binários e mídia (economia de tokens)
+# ------------------------------------------------------------------------------
+
+# Imagens
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.ico
+*.webp
+*.bmp
+*.tiff
+*.tif
+*.heic
+*.raw
+
+# Vídeo e áudio
+*.mp3
+*.mp4
+*.webm
+*.ogg
+*.wav
+*.flac
+*.avi
+*.mov
+*.mkv
+*.wmv
+
+# Documentos e arquivos compactados
+*.pdf
+*.zip
+*.tar.gz
+*.tar.bz2
+*.rar
+*.7z
+*.gz
+*.iso
+
+# Fontes
+*.ttf
+*.otf
+*.woff
+*.woff2
+*.eot
+
+# Binários compilados e executáveis
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+*.out
+*.class
+*.pyc

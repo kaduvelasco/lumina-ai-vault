@@ -1,0 +1,43 @@
+{
+  "name": "lumina-ai-vault",
+  "version": "0.1.0",
+  "description": "Lumina AI Vault — MCP server for persistent AI development memory, organizes project knowledge across sessions",
+  "keywords": ["mcp", "ai", "memory", "knowledge", "claude", "llm"],
+  "homepage": "https://github.com/kadu-velasco/lumina-ai-vault",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kadu-velasco/lumina-ai-vault.git"
+  },
+  "author": "Kadu Velasco",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "lumina-aivault": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "node --eval \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
