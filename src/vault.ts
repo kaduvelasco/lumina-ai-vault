@@ -1,19 +1,21 @@
+import { existsSync } from "fs";
 import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-  mkdirSync,
-  appendFileSync,
-  unlinkSync,
-  statSync,
-  openSync,
-  readSync,
-  closeSync,
-  rmSync,
-} from "fs";
-import { join, resolve } from "path";
+  readdir,
+  readFile,
+  writeFile,
+  mkdir,
+  appendFile,
+  unlink,
+  stat,
+  open,
+  read,
+  close,
+  rm,
+  rename,
+} from "fs/promises";
+import { join, resolve, dirname } from "path";
 import { homedir } from "os";
+import { logger } from "./logger.js";
 
 export const DEFAULT_BASE_PATH = join(homedir(), ".lumina-aivault", "knowledge");
 
@@ -99,13 +101,27 @@ export const MEMORY_TEMPLATES: Record<MemoryFile, string> = {
 `,
 };
 
-// Pre-computed trimmed versions for template comparison, avoiding repeated .trim() calls.
 const MEMORY_TEMPLATES_TRIMMED: Record<MemoryFile, string> = Object.fromEntries(
   MEMORY_FILES.map((f) => [f, MEMORY_TEMPLATES[f].trim()])
 ) as Record<MemoryFile, string>;
 
+/**
+ * Ensures a write operation is atomic by writing to a temporary file first.
+ */
+async function atomicWrite(filePath: string, content: string): Promise<void> {
+  const tempPath = `${filePath}.${Math.random().toString(36).slice(2)}.tmp`;
+  try {
+    await writeFile(tempPath, content, "utf-8");
+    await rename(tempPath, filePath);
+  } catch (err) {
+    if (existsSync(tempPath)) {
+      await unlink(tempPath).catch(() => {});
+    }
+    throw err;
+  }
+}
+
 export function resolveBasePath(envPath?: string): string {
-  // Use || instead of ?? so empty strings fall through to the next option.
   const raw = envPath?.trim() || process.env.AIVAULT_BASE_PATH?.trim() || DEFAULT_BASE_PATH;
   return resolve(raw.replace(/^~/, homedir()));
 }
@@ -119,8 +135,6 @@ export function projectPath(basePath: string, project: string): string {
   return join(basePath, project);
 }
 
-// Accepts only *.md filenames that start with an alphanumeric character.
-// The leading-alphanumeric requirement also blocks "." and ".." path traversal.
 function validateFilename(filename: string): string {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*\.md$/.test(filename)) {
     throw new Error(
@@ -130,23 +144,19 @@ function validateFilename(filename: string): string {
   return filename;
 }
 
-// Reads only the last byte of a file to check for a trailing newline.
-// Uses try/finally to guarantee the file descriptor is always closed.
-function getLastChar(filePath: string): string {
-  const { size } = statSync(filePath);
+async function getLastChar(filePath: string): Promise<string> {
+  const { size } = await stat(filePath);
   if (size === 0) return "";
-  const fd = openSync(filePath, "r");
+  const handle = await open(filePath, "r");
   try {
     const buf = Buffer.alloc(1);
-    readSync(fd, buf, 0, 1, size - 1);
+    await read(handle.fd, buf, 0, 1, size - 1);
     return buf.toString("utf-8");
   } finally {
-    closeSync(fd);
+    await close(handle.fd);
   }
 }
 
-// Converts a comma/semicolon/newline-separated string into a Markdown list.
-// Strips any leading "- " so items from AI agents don't get double-prefixed.
 function toList(value: string | undefined): string {
   if (!value?.trim()) return "-";
   return value
@@ -157,84 +167,101 @@ function toList(value: string | undefined): string {
     .join("\n");
 }
 
-export function listProjects(basePath: string): string[] {
+export async function listProjects(basePath: string): Promise<string[]> {
   if (!existsSync(basePath)) return [];
-  return readdirSync(basePath, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name)
-    .sort();
+  try {
+    const entries = await readdir(basePath, { withFileTypes: true });
+    return entries
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+      .sort();
+  } catch (err) {
+    logger.error(`Failed to list projects in ${basePath}`, err);
+    return [];
+  }
 }
 
-export function listFiles(basePath: string, project: string): string[] {
+export async function listFiles(basePath: string, project: string): Promise<string[]> {
   const dir = projectPath(basePath, project);
   if (!existsSync(dir)) throw new Error(`Project not found: "${project}"`);
-  return readdirSync(dir)
-    .filter((f) => f.endsWith(".md"))
-    .sort();
+  const files = await readdir(dir);
+  return files.filter((f) => f.endsWith(".md")).sort();
 }
 
-export function createProject(
+export async function createProject(
   basePath: string,
   name: string
-): { dir: string; created: boolean } {
+): Promise<{ dir: string; created: boolean }> {
   const dir = projectPath(basePath, name);
   const created = !existsSync(dir);
-  mkdirSync(dir, { recursive: true });
+  await mkdir(dir, { recursive: true });
   for (const file of MEMORY_FILES) {
     const filePath = join(dir, file);
     if (!existsSync(filePath)) {
-      writeFileSync(filePath, MEMORY_TEMPLATES[file], "utf-8");
+      await atomicWrite(filePath, MEMORY_TEMPLATES[file]);
     }
   }
+  logger.info(`Project ${name} ${created ? "created" : "accessed"} at ${dir}`);
   return { dir, created };
 }
 
-export function deleteProject(basePath: string, project: string): void {
+export async function deleteProject(basePath: string, project: string): Promise<void> {
   const dir = projectPath(basePath, project);
   if (!existsSync(dir)) throw new Error(`Project not found: "${project}"`);
-  rmSync(dir, { recursive: true });
+  await rm(dir, { recursive: true });
+  logger.info(`Project ${project} deleted`);
 }
 
-export function readMemory(basePath: string, project: string, filename: string): string {
+export async function readMemory(
+  basePath: string,
+  project: string,
+  filename: string
+): Promise<string> {
   const dir = projectPath(basePath, project);
   const safe = validateFilename(filename);
   const filePath = join(dir, safe);
   if (!existsSync(filePath)) throw new Error(`File not found: ${project}/${safe}`);
-  return readFileSync(filePath, "utf-8");
+  return await readFile(filePath, "utf-8");
 }
 
-export function writeMemory(
+export async function writeMemory(
   basePath: string,
   project: string,
   filename: string,
   content: string
-): void {
+): Promise<void> {
   const dir = projectPath(basePath, project);
   if (!existsSync(dir)) {
     throw new Error(`Project not found: "${project}". Use create_project first.`);
   }
   const safe = validateFilename(filename);
-  writeFileSync(join(dir, safe), content, "utf-8");
+  await atomicWrite(join(dir, safe), content);
+  logger.info(`Updated memory: ${project}/${safe}`);
 }
 
-export function appendMemory(
+export async function appendMemory(
   basePath: string,
   project: string,
   filename: string,
   content: string
-): void {
+): Promise<void> {
   const dir = projectPath(basePath, project);
   if (!existsSync(dir)) {
     throw new Error(`Project not found: "${project}". Use create_project first.`);
   }
   const safe = validateFilename(filename);
   const filePath = join(dir, safe);
-  const lastChar = existsSync(filePath) ? getLastChar(filePath) : "";
+  const lastChar = existsSync(filePath) ? await getLastChar(filePath) : "";
   const prefix = lastChar.length > 0 && lastChar !== "\n" ? "\n" : "";
-  appendFileSync(filePath, prefix + content, "utf-8");
+  await appendFile(filePath, prefix + content, "utf-8");
+  logger.info(`Appended memory to: ${project}/${safe}`);
 }
 
-export function deleteMemory(basePath: string, project: string, filename: string): void {
+export async function deleteMemory(
+  basePath: string,
+  project: string,
+  filename: string
+): Promise<void> {
   const safe = validateFilename(filename);
   if ((MEMORY_FILES as readonly string[]).includes(safe)) {
     throw new Error(
@@ -244,7 +271,8 @@ export function deleteMemory(basePath: string, project: string, filename: string
   const dir = projectPath(basePath, project);
   const filePath = join(dir, safe);
   if (!existsSync(filePath)) throw new Error(`File not found: ${project}/${safe}`);
-  unlinkSync(filePath);
+  await unlink(filePath);
+  logger.info(`Deleted custom memory: ${project}/${safe}`);
 }
 
 export interface InitAnswers {
@@ -259,12 +287,12 @@ export interface InitAnswers {
   nextSteps?: string;
 }
 
-export function initProjectMemory(
+export async function initProjectMemory(
   basePath: string,
   project: string,
   answers: InitAnswers
-): string {
-  const { dir, created } = createProject(basePath, project);
+): Promise<string> {
+  const { dir, created } = await createProject(basePath, project);
   const date = new Date().toISOString().slice(0, 10);
 
   const filled: Record<MemoryFile, string> = {
@@ -344,16 +372,15 @@ ${toList(answers.nextSteps)}
 
     let shouldWrite: boolean;
     if (created) {
-      // Brand-new project: files were just written with blank templates — always fill them.
       shouldWrite = true;
     } else {
-      // Existing project: only overwrite files that still hold the blank template.
-      const existing = readFileSync(filePath, "utf-8").trim();
+      const existingRaw = await readFile(filePath, "utf-8");
+      const existing = existingRaw.trim();
       shouldWrite = !existing || existing === MEMORY_TEMPLATES_TRIMMED[file];
     }
 
     if (shouldWrite) {
-      writeFileSync(filePath, filled[file], "utf-8");
+      await atomicWrite(filePath, filled[file]);
       written.push(file);
     }
   }
@@ -368,6 +395,7 @@ export interface SearchResult {
   file: string;
   line: number;
   text: string;
+  context?: string[];
 }
 
 export interface SearchOutput {
@@ -375,12 +403,13 @@ export interface SearchOutput {
   truncated: boolean;
 }
 
-export function searchMemory(
+export async function searchMemory(
   basePath: string,
   query: string,
   project?: string,
-  limit = 100
-): SearchOutput {
+  limit = 100,
+  contextLines = 0
+): Promise<SearchOutput> {
   if (!query.trim()) {
     throw new Error("Search query cannot be empty.");
   }
@@ -390,29 +419,38 @@ export function searchMemory(
 
   const results: SearchResult[] = [];
   const lowerQuery = query.toLowerCase();
-  // Collect one extra result to detect truncation without a separate flag.
   const cap = limit + 1;
 
-  const projects = project ? [project] : listProjects(basePath);
+  const projects = project ? [project] : await listProjects(basePath);
 
   outer: for (const proj of projects) {
     let dir: string;
     try {
       dir = projectPath(basePath, proj);
     } catch (err) {
-      if (project !== undefined) throw err; // Explicit project name — surface the error.
-      continue; // listProjects()-sourced name with invalid chars — skip silently.
+      if (project !== undefined) throw err;
+      continue;
     }
     if (!existsSync(dir)) continue;
 
-    const files = readdirSync(dir).filter((f) => f.endsWith(".md"));
+    const filesRaw = await readdir(dir);
+    const files = filesRaw.filter((f) => f.endsWith(".md"));
     for (const file of files) {
       const filePath = join(dir, file);
-      const lines = readFileSync(filePath, "utf-8").split("\n");
+      const content = await readFile(filePath, "utf-8");
+      const lines = content.split("\n");
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i] ?? "";
         if (line.toLowerCase().includes(lowerQuery)) {
-          results.push({ project: proj, file, line: i + 1, text: line.trim() });
+          const result: SearchResult = { project: proj, file, line: i + 1, text: line.trim() };
+          
+          if (contextLines > 0) {
+            const start = Math.max(0, i - contextLines);
+            const end = Math.min(lines.length, i + contextLines + 1);
+            result.context = lines.slice(start, end);
+          }
+          
+          results.push(result);
           if (results.length === cap) break outer;
         }
       }
@@ -423,17 +461,17 @@ export function searchMemory(
   return { results: truncated ? results.slice(0, limit) : results, truncated };
 }
 
-export function loadProjectContext(basePath: string, project: string): string {
+export async function loadProjectContext(basePath: string, project: string): Promise<string> {
   const dir = projectPath(basePath, project);
   if (!existsSync(dir)) throw new Error(`Project not found: "${project}"`);
 
-  const files = readdirSync(dir)
-    .filter((f) => f.endsWith(".md"))
-    .sort();
+  const filesRaw = await readdir(dir);
+  const files = filesRaw.filter((f) => f.endsWith(".md")).sort();
 
   const parts: string[] = [];
   for (const file of files) {
-    const content = readFileSync(join(dir, file), "utf-8").trim();
+    const contentRaw = await readFile(join(dir, file), "utf-8");
+    const content = contentRaw.trim();
     const knownTemplate = (MEMORY_TEMPLATES_TRIMMED as Record<string, string | undefined>)[file];
     const isBlankTemplate = knownTemplate !== undefined && content === knownTemplate;
     if (content && !isBlankTemplate) {
@@ -444,4 +482,28 @@ export function loadProjectContext(basePath: string, project: string): string {
   return parts.length > 0
     ? `# Context: ${project}\n\n${parts.join("\n\n---\n\n")}`
     : `# Context: ${project}\n\n(no content yet)`;
+}
+
+export interface HealthStatus {
+  project: string;
+  files: Record<string, "ok" | "missing">;
+  isHealthy: boolean;
+}
+
+export async function checkProjectHealth(basePath: string, project: string): Promise<HealthStatus> {
+  const dir = projectPath(basePath, project);
+  if (!existsSync(dir)) {
+    throw new Error(`Project not found: "${project}"`);
+  }
+
+  const status: Record<string, "ok" | "missing"> = {};
+  let isHealthy = true;
+
+  for (const file of MEMORY_FILES) {
+    const exists = existsSync(join(dir, file));
+    status[file] = exists ? "ok" : "missing";
+    if (!exists) isHealthy = false;
+  }
+
+  return { project, files: status, isHealthy };
 }

@@ -1,244 +1,125 @@
 # Lumina AI Vault
 
-Um AI Knowledge Vault — um servidor MCP que gerencia Project Memory Files para dar a agentes de IA memória persistente entre sessões.
+[![npm version](https://img.shields.io/npm/v/lumina-ai-vault.svg)](https://www.npmjs.com/package/lumina-ai-vault)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5+-blue.svg)](https://www.typescriptlang.org/)
+[![MCP](https://img.shields.io/badge/MCP-Protocol-orange.svg)](https://modelcontextprotocol.io/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUINDO.md)
 
-Agentes de IA esquecem tudo quando uma sessão termina. O Lumina AI Vault armazena o conhecimento do projeto em arquivos Markdown estruturados que qualquer agente pode ler e atualizar — mantendo o contexto vivo entre sessões, entre ferramentas e entre membros da equipe.
+[Read this file in English](README.md)
 
-## Como funciona
+O **Lumina AI Vault v2.0.0** é um servidor de alta performance para o Model Context Protocol (MCP), projetado para atuar como uma **memória persistente e estruturada** para assistentes de IA durante o desenvolvimento de software. Ele permite que modelos de IA mantenham uma "memória de longo prazo" dos objetivos do projeto, decisões arquiteturais e progresso ao longo de múltiplas sessões.
 
-O vault organiza o conhecimento em projetos. Cada projeto contém um conjunto de Project Memory Files — arquivos Markdown padrão cobrindo memória, arquitetura, stack, decisões, progresso e próximos passos. Um agente compatível com MCP pode ler, escrever, buscar e inicializar esses arquivos através de um conjunto de ferramentas dedicadas.
+## 🚀 Principais Recursos
 
-```
-~/.lumina-aivault/knowledge/
-├── meu-projeto/
-│   ├── memory.md
-│   ├── architecture.md
-│   ├── stack.md
-│   ├── decisions.md
-│   ├── progress.md
-│   └── next_steps.md
-└── outro-projeto/
-    └── ...
-```
+- **Organização por Projetos**: Gerencie múltiplos "cofres" de desenvolvimento de forma independente.
+- **Memória Estruturada**: Templates padronizados em `.md` para Memória, Arquitetura, Stack, Decisões, Progresso e Próximos Passos.
+- **Escritas Atômicas**: Proteção de integridade de dados usando o padrão de escrita temporária seguida de renomeação para evitar corrupção de arquivos.
+- **Busca com Contexto**: Busca poderosa com linhas de contexto configuráveis (estilo grep) para ajudar a IA a entender entradas históricas.
+- **Monitoramento de Saúde**: Ferramentas integradas para verificar a integridade do vault e identificar documentação ausente.
+- **Observabilidade para o Desenvolvedor**: Logging em tempo real via `stderr` para depuração sem quebrar o protocolo MCP.
+- **Validação Robusta**: Validação rigorosa de esquemas de entrada alimentada por **Zod**.
 
-Os arquivos são Markdown puro — versionáveis com git, legíveis por humanos e editáveis por qualquer ferramenta de IA.
+## 🛠️ Ferramentas
 
----
+O servidor disponibiliza as seguintes ferramentas para o assistente de IA:
 
-## Requisitos
+- `init_project_memory`: Inicialização guiada da base de conhecimento de um novo projeto.
+- `list_projects`: Visualiza todos os projetos gerenciados no vault.
+- `create_project`: Cria um novo vault com arquivos de memória padrão.
+- `read_memory` / `write_memory`: E/S básica para arquivos de memória.
+- `append_memory`: Adiciona entradas a logs (como decisões ou progresso) sem sobrescrever.
+- `search_memory`: Busca em todo o vault com suporte a linhas de contexto.
+- `check_project_health`: Audita a completude da memória de um projeto.
+- `load_project_context`: Consolida todo o estado de um projeto em um único bloco de contexto.
 
-- Node.js 18 ou superior
+## 💡 Exemplos de Prompts
 
----
+Você pode usar estes prompts para ajudar seu assistente de IA a interagir com o Vault:
 
-## Instalação
+### Inicializando um Projeto
+> "Estou começando um novo projeto chamado 'nebula-engine'. Use a ferramenta `init_project_memory` para configurar a documentação inicial. Eu fornecerei os detalhes conforme você fizer as perguntas."
 
-### Via npx (sem instalação)
+### Registrando uma Decisão
+> "Acabamos de decidir mudar de REST para gRPC para a comunicação interna. Use `append_memory` para registrar isso em `decisions.md` do projeto 'nebula-engine', explicando que a mudança é para reduzir a latência."
+
+### Recuperação Contextual
+> "Preciso trabalhar na camada de banco de dados. Busque no vault 'nebula-engine' por 'PostgreSQL' usando 3 linhas de contexto para me lembrar das nossas decisões de esquema."
+
+### Retomando o Contexto
+> "Voltei a trabalhar no projeto 'lumina-web'. Por favor, use `load_project_context` para atualizar sua memória sobre o estado atual e os próximos passos."
+
+## 📦 Primeiros Passos
+
+### Instalação
 
 ```bash
-npx lumina-ai-vault
-```
-
-### Instalação global
-
-```bash
-npm install -g lumina-ai-vault
-lumina-aivault
-```
-
-### A partir do código-fonte
-
-```bash
-git clone https://github.com/kadu-velasco/lumina-ai-vault.git
-cd lumina-ai-vault
 npm install
 npm run build
-node dist/index.js
 ```
 
----
+### Configuração
 
-## Configuração
+Para usar o Lumina AI Vault, você precisa adicioná-lo à configuração do seu cliente MCP. Abaixo estão exemplos para as ferramentas mais populares.
 
-O caminho base do vault pode ser definido de três formas, em ordem de prioridade:
-
-| Método | Exemplo |
-|---|---|
-| Argumento CLI | `lumina-aivault /caminho/do/vault` |
-| Variável de ambiente | `AIVAULT_BASE_PATH=/caminho/do/vault lumina-aivault` |
-| Padrão | `~/.lumina-aivault/knowledge` |
-
----
-
-## Conectando a um cliente MCP
-
-### Claude Code
-
-Adicione o servidor às configurações MCP do Claude Code:
+#### Claude Desktop
+Adicione isto ao seu `claude_desktop_config.json`:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "lumina-aivault": {
-      "command": "npx",
-      "args": ["lumina-ai-vault"]
+      "command": "node",
+      "args": ["/caminho/absoluto/para/lumina-ai-vault/dist/index.js"]
     }
   }
 }
 ```
 
-Para usar um caminho de vault personalizado:
+#### Claude Code CLI
+O Claude Code CLI detecta automaticamente servidores MCP configurados no Claude Desktop. Você também pode configurá-lo diretamente via CLI:
+
+```bash
+claude mcp add lumina-aivault node /caminho/absoluto/para/lumina-ai-vault/dist/index.js
+```
+
+#### Gemini Code Assist
+Configure o servidor MCP através das configurações da extensão Gemini Code Assist em sua IDE (VS Code, IntelliJ) apontando para o executável.
+
+#### Windsurf
+Adicione ao seu `~/.codeium/windsurf.json` ou através da interface de configuração MCP do Windsurf:
 
 ```json
 {
   "mcpServers": {
     "lumina-aivault": {
-      "command": "npx",
-      "args": ["lumina-ai-vault", "/caminho/do/seu/vault"]
+      "command": "node",
+      "args": ["/caminho/absoluto/para/lumina-ai-vault/dist/index.js"]
     }
   }
 }
 ```
 
-### Outros clientes MCP
+#### OpenCode (CLI & Desktop)
+O OpenCode permite configurar servidores MCP através do seu painel de configurações ou através do arquivo de configuração da CLI:
 
-O servidor se comunica via stdio e é compatível com qualquer cliente que suporte o Model Context Protocol.
-
----
-
-## Ferramentas disponíveis
-
-### `init_project_memory`
-
-Inicializa os arquivos de memória de um projeto do zero. O agente faz ao usuário um conjunto de perguntas guiadas antes de chamar esta ferramenta e usa as respostas para preencher todos os arquivos padrão.
-
-**Acionado por:** *"Inicie a memória para o projeto X"*
-
----
-
-### `create_project`
-
-Cria um novo projeto com todos os arquivos de memória padrão pré-preenchidos com templates em branco. Use `"global"` como nome do projeto para conhecimento compartilhado entre projetos.
-
----
-
-### `delete_project`
-
-Exclui permanentemente um projeto e todos os seus arquivos de memória. Requer `confirm: true` para executar — o agente deve perguntar ao usuário explicitamente antes de chamar esta ferramenta. Esta ação é irreversível.
-
----
-
-### `list_projects`
-
-Lista todos os projetos atualmente no vault.
-
----
-
-### `list_files`
-
-Lista todos os arquivos `.md` dentro de um projeto específico.
-
----
-
-### `read_memory`
-
-Lê o conteúdo de um arquivo de memória de um projeto.
-
----
-
-### `write_memory`
-
-Sobrescreve o conteúdo completo de um arquivo de memória.
-
----
-
-### `append_memory`
-
-Acrescenta conteúdo a um arquivo de memória sem alterar o conteúdo existente. Indicado para arquivos de log como `decisions.md` e `progress.md`.
-
----
-
-### `delete_memory`
-
-Deleta um arquivo de memória customizado de um projeto. Os arquivos padrão (`memory.md`, `architecture.md`, `stack.md`, `decisions.md`, `progress.md`, `next_steps.md`) são protegidos e não podem ser deletados — use `write_memory` para limpar o conteúdo deles.
-
----
-
-### `search_memory`
-
-Busca uma string de texto em todos os arquivos de memória do vault, ou dentro de um projeto específico. Retorna as linhas correspondentes com referências de arquivo e número de linha. Aceita um parâmetro opcional `limit` (padrão: 100).
-
----
-
-### `load_project_context`
-
-Carrega todos os arquivos de memória de um projeto e os concatena em um único bloco de contexto. Arquivos que ainda contêm apenas o template em branco são omitidos. Use no início de uma sessão para restaurar o contexto completo do projeto.
-
-**Acionado por:** *"Carregue o contexto do projeto X"*
-
----
-
-## Estrutura dos arquivos de memória
-
-Cada projeto contém seis arquivos padrão:
-
-### `memory.md`
-Resumo geral do projeto. Cobre nome, descrição, objetivo, fase atual, componentes principais e notas importantes.
-
-### `architecture.md`
-Visão geral da arquitetura do sistema, componentes principais, fluxo de dados e integrações externas.
-
-### `stack.md`
-Stack tecnológica: linguagens, frameworks, bibliotecas, infraestrutura e ferramentas de desenvolvimento.
-
-### `decisions.md`
-Log append-only de decisões técnicas. Cada entrada registra a decisão, o motivo, as alternativas consideradas e o impacto.
-
-Formato sugerido de entrada:
-```markdown
-## YYYY-MM-DD — Título da decisão
-**Decisão:** ...
-**Motivo:** ...
-**Alternativas:** ...
-**Impacto:** ...
+```json
+{
+  "servers": {
+    "lumina-aivault": {
+      "command": "node",
+      "args": ["/caminho/absoluto/para/lumina-ai-vault/dist/index.js"]
+    }
+  }
+}
 ```
 
-### `progress.md`
-Log append-only de desenvolvimento. Cada entrada é datada e registra o que foi feito, alterado, corrigido e quaisquer notas relevantes.
+## 📄 Licença
 
-Formato sugerido de entrada:
-```markdown
-## YYYY-MM-DD
-- **Feito:** ...
-- **Alterado:** ...
-- **Corrigido:** ...
-- **Notas:** ...
-```
-
-### `next_steps.md`
-Trabalho planejado organizado por horizonte de tempo: tarefas imediatas, curto prazo, longo prazo e ideias para o futuro.
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ---
 
-## Fluxo de trabalho recomendado
-
-**Início de sessão**
-```
-Carregue o contexto do projeto meu-projeto
-```
-
-**Fim de sessão**
-```
-Atualize a memória do projeto meu-projeto
-```
-
-**Iniciando um novo projeto**
-```
-Inicie a memória para o projeto meu-projeto
-```
-
----
-
-## Licença
-
-MIT
+Feito com ❤️ e IA por [Kadu Velasco](https://github.com/kaduvelasco)
