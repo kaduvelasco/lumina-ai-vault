@@ -31,6 +31,6 @@ describe("WriteMemoryHandler", () => {
       "test.md",
       "new content"
     );
-    expect(result.content[0].text).toContain("Written: my-project/test.md");
+    expect(result.content[0]!.text).toContain("Written: my-project/test.md");
   });
 });

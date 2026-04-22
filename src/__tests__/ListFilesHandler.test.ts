@@ -22,8 +22,8 @@ describe("ListFilesHandler", () => {
     const result = await handler.execute({ project: "my-project" });
 
     expect(vault.listFiles).toHaveBeenCalledWith(basePath, "my-project");
-    expect(result.content[0].text).toContain("file1.md");
-    expect(result.content[0].text).toContain("file2.md");
+    expect(result.content[0]!.text).toContain("file1.md");
+    expect(result.content[0]!.text).toContain("file2.md");
   });
 
   it("should return a helpful message when no files are found", async () => {
@@ -31,6 +31,6 @@ describe("ListFilesHandler", () => {
 
     const result = await handler.execute({ project: "my-project" });
 
-    expect(result.content[0].text).toContain('No files found in project "my-project"');
+    expect(result.content[0]!.text).toContain('No files found in project "my-project"');
   });
 });

@@ -22,7 +22,8 @@ describe("ReadMemoryHandler", () => {
     const result = await handler.execute({ project: "p", filename: "f.md" });
 
     expect(vault.readMemory).toHaveBeenCalledWith(basePath, "p", "f.md");
-    expect(result.content[0].text).toBe("Some content");
+    expect(result.content[0]!.text).toBe("Some content");
+
   });
 
   it("should handle empty files", async () => {
@@ -30,6 +31,7 @@ describe("ReadMemoryHandler", () => {
 
     const result = await handler.execute({ project: "p", filename: "f.md" });
 
-    expect(result.content[0].text).toBe("(file is empty)");
+    expect(result.content[0]!.text).toBe("(file is empty)");
+
   });
 });

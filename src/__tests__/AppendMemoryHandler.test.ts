@@ -26,6 +26,6 @@ describe("AppendMemoryHandler", () => {
     });
 
     expect(vault.appendMemory).toHaveBeenCalledWith(basePath, "p", "f.md", "extra content");
-    expect(result.content[0].text).toContain("Appended to: p/f.md");
+    expect(result.content[0]!.text).toContain("Appended to: p/f.md");
   });
 });

@@ -20,7 +20,7 @@ describe("DeleteProjectHandler", () => {
 
     expect(vault.deleteProject).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("confirm: true");
+    expect(result.content[0]!.text).toContain("confirm: true");
   });
 
   it("should delete project when confirmed", async () => {
@@ -28,7 +28,7 @@ describe("DeleteProjectHandler", () => {
     const result = await handler.execute({ project: "my-project", confirm: true });
 
     expect(vault.deleteProject).toHaveBeenCalledWith(basePath, "my-project");
-    expect(result.content[0].text).toContain('Project "my-project" deleted');
+    expect(result.content[0]!.text).toContain('Project "my-project" deleted');
   });
 
   it("should validate input correctly", () => {

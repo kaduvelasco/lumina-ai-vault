@@ -21,6 +21,6 @@ describe("LoadProjectContextHandler", () => {
     const result = await handler.execute({ project: "p" });
 
     expect(vault.loadProjectContext).toHaveBeenCalledWith(basePath, "p");
-    expect(result.content[0].text).toBe("# Context: p\n\nContent");
+    expect(result.content[0]!.text).toBe("# Context: p\n\nContent");
   });
 });

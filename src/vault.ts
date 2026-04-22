@@ -8,8 +8,6 @@ import {
   unlink,
   stat,
   open,
-  read,
-  close,
   rm,
   rename,
 } from "fs/promises";
@@ -122,8 +120,10 @@ async function atomicWrite(filePath: string, content: string): Promise<void> {
 }
 
 export function resolveBasePath(envPath?: string): string {
-  const raw = envPath?.trim() || process.env.AIVAULT_BASE_PATH?.trim() || DEFAULT_BASE_PATH;
-  return resolve(raw.replace(/^~/, homedir()));
+  let raw = envPath?.trim() || process.env.AIVAULT_BASE_PATH?.trim() || DEFAULT_BASE_PATH;
+  // Expand HOME, $HOME or ~ at the start of the path (case-insensitive)
+  raw = raw.replace(/^(?:HOME|\$HOME|~)(?=[\\/]|$)/i, homedir());
+  return resolve(raw);
 }
 
 export function projectPath(basePath: string, project: string): string {
@@ -150,10 +150,10 @@ async function getLastChar(filePath: string): Promise<string> {
   const handle = await open(filePath, "r");
   try {
     const buf = Buffer.alloc(1);
-    await read(handle.fd, buf, 0, 1, size - 1);
+    await handle.read(buf, 0, 1, size - 1);
     return buf.toString("utf-8");
   } finally {
-    await close(handle.fd);
+    await handle.close();
   }
 }
 
@@ -276,24 +276,28 @@ export async function deleteMemory(
 }
 
 export interface InitAnswers {
-  description?: string;
-  goal?: string;
-  phase?: string;
-  architectureOverview?: string;
-  components?: string;
-  languages?: string;
-  frameworks?: string;
-  infrastructure?: string;
-  nextSteps?: string;
+  description?: string | undefined;
+  goal?: string | undefined;
+  phase?: string | undefined;
+  architectureOverview?: string | undefined;
+  components?: string | undefined;
+  languages?: string | undefined;
+  frameworks?: string | undefined;
+  infrastructure?: string | undefined;
+  nextSteps?: string | undefined;
 }
 
 export async function initProjectMemory(
   basePath: string,
   project: string,
-  answers: InitAnswers
+  answers: InitAnswers,
+  workspaceRoot?: string,
+  originalPath?: string
 ): Promise<string> {
   const { dir, created } = await createProject(basePath, project);
   const date = new Date().toISOString().slice(0, 10);
+
+  // ... (rest of filled object remains same)
 
   const filled: Record<MemoryFile, string> = {
     "memory.md": `# Memory
@@ -385,9 +389,29 @@ ${toList(answers.nextSteps)}
     }
   }
 
+  let extra = "";
+  if (workspaceRoot) {
+    try {
+      const configPath = join(workspaceRoot, ".aivault.json");
+      const configContent = JSON.stringify(
+        {
+          project,
+          path: originalPath || basePath,
+        },
+        null,
+        2
+      );
+      await atomicWrite(configPath, configContent);
+      extra = ` and local config ".aivault.json" created at ${workspaceRoot}`;
+    } catch (err) {
+      logger.error(`Failed to create local config at ${workspaceRoot}`, err);
+      extra = ` (but failed to create .aivault.json: ${err instanceof Error ? err.message : String(err)})`;
+    }
+  }
+
   return written.length > 0
-    ? `Project "${project}" initialized. Files written: ${written.join(", ")}`
-    : `Project "${project}" already has content in all files. No files were overwritten.`;
+    ? `Project "${project}" initialized${extra}. Files written: ${written.join(", ")}`
+    : `Project "${project}" already has content in all files${extra}. No files were overwritten.`;
 }
 
 export interface SearchResult {

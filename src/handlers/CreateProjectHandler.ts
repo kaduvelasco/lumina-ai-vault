@@ -1,16 +1,18 @@
 import { z } from "zod";
 import { BaseToolHandler } from "./base.js";
-import { createProject, MEMORY_FILES } from "../vault.js";
+import { createProject, MEMORY_FILES, resolveBasePath } from "../vault.js";
 
 export class CreateProjectHandler extends BaseToolHandler<
   z.ZodObject<{
     name: z.ZodString;
+    path: z.ZodOptional<z.ZodString>;
   }>
 > {
   public readonly name = "create_project";
   public readonly description = `Create a new project in the vault with standard memory files: ${MEMORY_FILES.join(", ")}. Use "global" for shared cross-project knowledge.`;
   public readonly inputSchema = z.object({
     name: z.string().min(1).describe("Project name (alphanumeric, hyphens, underscores)"),
+    path: z.string().optional().describe('Base path where the memory is stored. If left blank, uses the default vault path. To use the default user directory, start the path with "HOME" (e.g., "HOME/custom-vault").'),
   });
 
   constructor(private basePath: string) {
@@ -19,7 +21,8 @@ export class CreateProjectHandler extends BaseToolHandler<
 
   async execute(args: z.infer<typeof this.inputSchema>) {
     const projectName = args.name.trim();
-    const { dir, created } = await createProject(this.basePath, projectName);
+    const resolvedPath = args.path ? resolveBasePath(args.path) : this.basePath;
+    const { dir, created } = await createProject(resolvedPath, projectName);
     return {
       content: [
         {

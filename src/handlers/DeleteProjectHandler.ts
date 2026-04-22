@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { BaseToolHandler } from "./base.js";
-import { deleteProject } from "../vault.js";
+import { deleteProject, resolveBasePath } from "../vault.js";
 
 export class DeleteProjectHandler extends BaseToolHandler<
   z.ZodObject<{
     project: z.ZodString;
     confirm: z.ZodBoolean;
+    path: z.ZodOptional<z.ZodString>;
   }>
 > {
   public readonly name = "delete_project";
@@ -14,6 +15,7 @@ export class DeleteProjectHandler extends BaseToolHandler<
   public readonly inputSchema = z.object({
     project: z.string().min(1).describe("Project name to delete"),
     confirm: z.boolean().describe("Must be true to confirm permanent deletion"),
+    path: z.string().optional().describe('Base path where the memory is stored. If left blank, uses the default vault path. To use the default user directory, start the path with "HOME" (e.g., "HOME/custom-vault").'),
   });
 
   constructor(private basePath: string) {
@@ -33,7 +35,8 @@ export class DeleteProjectHandler extends BaseToolHandler<
         isError: true,
       };
     }
-    await deleteProject(this.basePath, projectName);
+    const resolvedPath = args.path ? resolveBasePath(args.path) : this.basePath;
+    await deleteProject(resolvedPath, projectName);
     return {
       content: [{ type: "text", text: `Project "${projectName}" deleted.` }],
     };

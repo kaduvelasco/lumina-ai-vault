@@ -13,12 +13,36 @@ O **Lumina AI Vault v2.0.0** é um servidor de alta performance para o Model Con
 ## 🚀 Principais Recursos
 
 - **Organização por Projetos**: Gerencie múltiplos "cofres" de desenvolvimento de forma independente.
+- **Caminhos de Vault Customizados**: Armazene sua memória em qualquer lugar do sistema, com suporte aos atalhos padrão (`HOME`, `$HOME` ou `~`).
+- **Configuração Local do Projeto**: Gera automaticamente o arquivo `.aivault.json` na raiz do seu projeto para ajudar a IA a "auto-localizar" o vault correto.
 - **Memória Estruturada**: Templates padronizados em `.md` para Memória, Arquitetura, Stack, Decisões, Progresso e Próximos Passos.
 - **Escritas Atômicas**: Proteção de integridade de dados usando o padrão de escrita temporária seguida de renomeação para evitar corrupção de arquivos.
 - **Busca com Contexto**: Busca poderosa com linhas de contexto configuráveis (estilo grep) para ajudar a IA a entender entradas históricas.
 - **Monitoramento de Saúde**: Ferramentas integradas para verificar a integridade do vault e identificar documentação ausente.
 - **Observabilidade para o Desenvolvedor**: Logging em tempo real via `stderr` para depuração sem quebrar o protocolo MCP.
 - **Validação Robusta**: Validação rigorosa de esquemas de entrada alimentada por **Zod**.
+
+## ⚙️ Caminhos Customizados e Auto-Localização
+
+O Lumina AI Vault é flexível sobre onde armazena seus dados:
+
+### Caminho de Vault Customizado
+Por padrão, os dados são salvos em `~/.lumina-aivault/knowledge`. Você pode sobrescrever isso:
+1.  **Sobrescrita Global**: Defina a variável de ambiente `AIVAULT_BASE_PATH`.
+2.  **Sobrescrita por Ferramenta**: Todas as ferramentas aceitam um parâmetro opcional `path`.
+3.  **Atalhos de Caminho**: Em qualquer parâmetro de caminho, você pode usar `HOME`, `$HOME` ou `~` no início (ex: `~/vaults/meu-projeto`). A palavra-chave `HOME` não diferencia maiúsculas de minúsculas.
+
+### Configuração Local (`.aivault.json`)
+Ao usar o `init_project_memory`, se a IA fornecer o `workspace_root` (a pasta local do seu projeto), o servidor criará um arquivo `.aivault.json`.
+
+**Exemplo de `.aivault.json`:**
+```json
+{
+  "project": "nebula-engine",
+  "path": "HOME/.lumina-aivault/knowledge"
+}
+```
+Este arquivo permite que o assistente de IA identifique automaticamente o nome do projeto e o caminho do vault assim que ler os arquivos do projeto, eliminando a necessidade de configuração manual em cada sessão.
 
 ## 🛠️ Ferramentas
 

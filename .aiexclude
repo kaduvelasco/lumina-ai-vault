@@ -1,5 +1,5 @@
 # ==============================================================================
-# .aiexclude — LuminaDev AI Shield
+# .aiexclude — LuminaDev AI Shield 
 #
 # Impede que ferramentas de IA (Claude Code, Gemini Code Assist) processem
 # arquivos sensíveis, binários e dados pesados desnecessários.

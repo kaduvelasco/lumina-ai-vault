@@ -32,8 +32,8 @@ describe("CreateProjectHandler", () => {
     const result = await handler.execute({ name: "my-project" });
 
     expect(vault.createProject).toHaveBeenCalledWith(basePath, "my-project");
-    expect(result.content[0].text).toContain('Project "my-project" created');
-    expect(result.isError).toBeUndefined();
+    expect(result.content[0]!.text).toContain('Project "my-project" created');
+    expect((result as any).isError).toBeUndefined();
   });
 
   it("should handle already existing project", async () => {
@@ -44,6 +44,6 @@ describe("CreateProjectHandler", () => {
 
     const result = await handler.execute({ name: "my-project" });
 
-    expect(result.content[0].text).toContain('Project "my-project" already exists');
+    expect(result.content[0]!.text).toContain('Project "my-project" already exists');
   });
 });

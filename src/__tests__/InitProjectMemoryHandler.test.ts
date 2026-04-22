@@ -30,25 +30,33 @@ describe("InitProjectMemoryHandler", () => {
       expect.objectContaining({
         description: "A test project",
         goal: "Testing",
-      })
+      }),
+      undefined,
+      undefined
     );
-    expect(result.content[0].text).toBe("Project initialized");
+    expect(result.content[0]!.text).toBe("Project initialized");
   });
 
   it("should handle optional fields as undefined if not provided", async () => {
     vi.mocked(vault.initProjectMemory).mockResolvedValue("ok");
     await handler.execute({ project: "p" });
 
-    expect(vault.initProjectMemory).toHaveBeenCalledWith(basePath, "p", {
-      description: undefined,
-      goal: undefined,
-      phase: undefined,
-      architectureOverview: undefined,
-      components: undefined,
-      languages: undefined,
-      frameworks: undefined,
-      infrastructure: undefined,
-      nextSteps: undefined,
-    });
+    expect(vault.initProjectMemory).toHaveBeenCalledWith(
+      basePath,
+      "p",
+      {
+        description: undefined,
+        goal: undefined,
+        phase: undefined,
+        architectureOverview: undefined,
+        components: undefined,
+        languages: undefined,
+        frameworks: undefined,
+        infrastructure: undefined,
+        nextSteps: undefined,
+      },
+      undefined,
+      undefined
+    );
   });
 });

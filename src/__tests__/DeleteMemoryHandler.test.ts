@@ -25,6 +25,6 @@ describe("DeleteMemoryHandler", () => {
     });
 
     expect(vault.deleteMemory).toHaveBeenCalledWith(basePath, "p", "custom.md");
-    expect(result.content[0].text).toContain("Deleted: p/custom.md");
+    expect(result.content[0]!.text).toContain("Deleted: p/custom.md");
   });
 });

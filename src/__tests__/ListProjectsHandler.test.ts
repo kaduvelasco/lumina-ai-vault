@@ -28,8 +28,8 @@ describe("ListProjectsHandler", () => {
     const result = await handler.execute({});
 
     expect(vault.listProjects).toHaveBeenCalledWith(basePath);
-    expect(result.content[0].text).toContain("project1");
-    expect(result.content[0].text).toContain("project2");
+    expect(result.content[0]!.text).toContain("project1");
+    expect(result.content[0]!.text).toContain("project2");
   });
 
   it("should return a helpful message when no projects are found", async () => {
@@ -37,7 +37,7 @@ describe("ListProjectsHandler", () => {
 
     const result = await handler.execute({});
 
-    expect(result.content[0].text).toBe("No projects found. Use create_project to add one.");
+    expect(result.content[0]!.text).toBe("No projects found. Use create_project to add one.");
   });
 
   it("should validate empty input correctly", () => {

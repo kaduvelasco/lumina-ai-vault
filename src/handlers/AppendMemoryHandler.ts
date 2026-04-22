@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { BaseToolHandler } from "./base.js";
-import { appendMemory, MEMORY_FILES } from "../vault.js";
+import { appendMemory, MEMORY_FILES, resolveBasePath } from "../vault.js";
 
 export class AppendMemoryHandler extends BaseToolHandler<
   z.ZodObject<{
     project: z.ZodString;
     filename: z.ZodString;
     content: z.ZodString;
+    path: z.ZodOptional<z.ZodString>;
   }>
 > {
   public readonly name = "append_memory";
@@ -19,6 +20,7 @@ export class AppendMemoryHandler extends BaseToolHandler<
       .min(1)
       .describe(`File to append to. Standard files: ${MEMORY_FILES.join(", ")}`),
     content: z.string().describe("Content to append"),
+    path: z.string().optional().describe('Base path where the memory is stored. If left blank, uses the default vault path. To use the default user directory, start the path with "HOME" (e.g., "HOME/custom-vault").'),
   });
 
   constructor(private basePath: string) {
@@ -26,7 +28,8 @@ export class AppendMemoryHandler extends BaseToolHandler<
   }
 
   async execute(args: z.infer<typeof this.inputSchema>) {
-    await appendMemory(this.basePath, args.project, args.filename, args.content);
+    const resolvedPath = args.path ? resolveBasePath(args.path) : this.basePath;
+    await appendMemory(resolvedPath, args.project, args.filename, args.content);
     return {
       content: [
         {

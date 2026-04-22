@@ -24,9 +24,9 @@ describe("SearchMemoryHandler", () => {
     const args = handler.validate({ query: "search-term" });
     const result = await handler.execute(args);
 
-    expect(vault.searchMemory).toHaveBeenCalledWith(basePath, "search-term", undefined, 100);
-    expect(result.content[0].text).toContain("p1/m.md:10");
-    expect(result.content[0].text).toContain("matched line");
+    expect(vault.searchMemory).toHaveBeenCalledWith(basePath, "search-term", undefined, 100, 0);
+    expect(result.content[0]!.text).toContain("p1/m.md:10");
+    expect(result.content[0]!.text).toContain("matched line");
   });
 
   it("should handle empty search results", async () => {
@@ -35,9 +35,10 @@ describe("SearchMemoryHandler", () => {
       truncated: false,
     });
 
-    const result = await handler.execute({ query: "not-found" });
+    const args = handler.validate({ query: "not-found" });
+    const result = await handler.execute(args);
 
-    expect(result.content[0].text).toBe('No results for "not-found"');
+    expect(result.content[0]!.text).toBe('No results for "not-found"');
   });
 
   it("should show truncation message when limit is reached", async () => {
@@ -46,8 +47,9 @@ describe("SearchMemoryHandler", () => {
       truncated: true,
     });
 
-    const result = await handler.execute({ query: "q", limit: 1 });
+    const args = handler.validate({ query: "q", limit: 1 });
+    const result = await handler.execute(args);
 
-    expect(result.content[0].text).toContain("(limit of 1 results reached)");
+    expect(result.content[0]!.text).toContain("(limit of 1 results reached)");
   });
 });

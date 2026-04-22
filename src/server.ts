@@ -41,11 +41,11 @@ export function createServer(basePath: string) {
       return await handler.execute(validatedArgs);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        logger.warn(`Invalid parameters for ${name}`, err.errors);
+        logger.warn(`Invalid parameters for ${name}`, err.issues);
         return {
           content: [{ 
             type: "text", 
-            text: `Invalid parameters: ${err.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}` 
+            text: `Invalid parameters: ${err.issues.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`).join(', ')}` 
           }],
           isError: true,
         };

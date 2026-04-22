@@ -13,12 +13,36 @@
 ## 🚀 Key Features
 
 - **Project-Based Organization**: Manage multiple development vaults independently.
+- **Custom Vault Paths**: Store your memory anywhere on the system, with support for standard shortcuts (`HOME`, `$HOME`, or `~`).
+- **Local Project Config**: Automatically generates `.aivault.json` in your project's root to help the AI "auto-locate" the correct vault.
 - **Structured Memory**: Standardized `.md` templates for Memory, Architecture, Stack, Decisions, Progress, and Next Steps.
 - **Atomic Writes**: Data integrity protection using a write-then-rename pattern to prevent file corruption.
 - **Context-Aware Search**: Powerful search with configurable context lines (grep-style) to help the AI understand historical entries.
 - **Health Monitoring**: Built-in tools to verify vault integrity and identify missing documentation.
 - **Developer Observability**: Real-time logging to `stderr` for debugging without breaking the MCP protocol.
 - **Robust Validation**: Strict input schema validation powered by **Zod**.
+
+## ⚙️ Custom Paths & Auto-Location
+
+Lumina AI Vault is flexible about where it stores your data:
+
+### Custom Vault Path
+By default, data is saved in `~/.lumina-aivault/knowledge`. You can override this:
+1.  **Global Override**: Set the `AIVAULT_BASE_PATH` environment variable.
+2.  **Per-Tool Override**: All tools accept an optional `path` parameter.
+3.  **Path Shortcuts**: In any path parameter, you can use `HOME`, `$HOME`, or `~` at the beginning (e.g., `~/vaults/my-project`). The `HOME` keyword is case-insensitive.
+
+### Local Configuration (`.aivault.json`)
+When using `init_project_memory`, if the AI provides the `workspace_root` (your project's local folder), the server will create a `.aivault.json` file. 
+
+**Example `.aivault.json`:**
+```json
+{
+  "project": "nebula-engine",
+  "path": "HOME/.lumina-aivault/knowledge"
+}
+```
+This file allows the AI assistant to automatically identify the project name and the vault path as soon as it reads the project files, eliminating the need for manual configuration in every session.
 
 ## 🛠️ Tools
 
