@@ -8,6 +8,7 @@ import { z } from "zod";
 const _require = createRequire(import.meta.url);
 const { version } = _require("../package.json") as { version: string };
 import { resolveBasePath } from "./vault.js";
+import { readGlobalConfig } from "./config.js";
 import { createHandlers } from "./handlers/index.js";
 import { logger } from "./logger.js";
 
@@ -68,7 +69,18 @@ export function createServer(basePath: string) {
 }
 
 export async function runServer(basePath?: string) {
-  const resolved = resolveBasePath(basePath);
+  let resolved: string;
+  if (basePath) {
+    resolved = resolveBasePath(basePath);
+  } else if (process.env.AIVAULT_BASE_PATH) {
+    resolved = resolveBasePath();
+  } else {
+    const config = await readGlobalConfig();
+    resolved = config.globalVaultPath
+      ? resolveBasePath(config.globalVaultPath)
+      : resolveBasePath();
+  }
+
   const server = createServer(resolved);
   const transport = new StdioServerTransport();
   await server.connect(transport);

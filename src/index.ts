@@ -1,8 +1,18 @@
 #!/usr/bin/env node
 
 import { runServer } from "./server.js";
+import { runCli } from "./cli.js";
 
-runServer(process.argv[2] || undefined).catch((err) => {
-  console.error("Fatal:", err);
-  process.exit(1);
-});
+const args = process.argv.slice(2);
+
+if (args[0] === "config") {
+  runCli(args.slice(1)).catch((err: unknown) => {
+    console.error("Error:", err);
+    process.exit(1);
+  });
+} else {
+  runServer(args[0] || undefined).catch((err: unknown) => {
+    console.error("Fatal:", err);
+    process.exit(1);
+  });
+}
