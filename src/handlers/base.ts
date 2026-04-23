@@ -39,7 +39,7 @@ export abstract class BaseToolHandler<T extends z.ZodTypeAny> {
   }
 
   private getJsonSchema() {
-    const shape = (this.inputSchema as z.ZodObject<z.ZodRawShape>).shape;
+    const shape = (this.inputSchema as unknown as z.ZodObject<z.ZodRawShape>).shape;
     if (!shape) return { type: "object", properties: {} };
 
     const properties: Record<string, { type: string; description?: string }> = {};

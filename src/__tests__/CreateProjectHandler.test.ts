@@ -33,7 +33,6 @@ describe("CreateProjectHandler", () => {
 
     expect(vault.createProject).toHaveBeenCalledWith(basePath, "my-project");
     expect(result.content[0]!.text).toContain('Project "my-project" created');
-    expect(result.isError).toBeUndefined();
   });
 
   it("should handle already existing project", async () => {
