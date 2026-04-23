@@ -3,146 +3,319 @@
 [![npm version](https://img.shields.io/npm/v/lumina-ai-vault.svg)](https://www.npmjs.com/package/lumina-ai-vault)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5+-blue.svg)](https://www.typescriptlang.org/)
+[![Node](https://img.shields.io/badge/Node.js-%3E%3D18-green.svg)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-orange.svg)](https://modelcontextprotocol.io/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-[Leia este arquivo em Português (Brasil)](LEIAME.md)
+📄 Portuguese version: see [LEIAME.md](LEIAME.md)
 
-**Lumina AI Vault v2.0.0** is a high-performance Model Context Protocol (MCP) server designed to act as a **structured, persistent memory** for AI assistants during software development. It enables AI models to maintain a "long-term memory" of project goals, architectural decisions, and progress across multiple sessions.
+**Lumina AI Vault** is a high-performance [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that acts as a **structured, persistent memory** for AI assistants during software development. It enables AI models to maintain long-term memory of project goals, architectural decisions, technical stack, and progress across multiple sessions.
 
-## 🚀 Key Features
+## 🚀 Features
 
-- **Project-Based Organization**: Manage multiple development vaults independently.
-- **Custom Vault Paths**: Store your memory anywhere on the system, with support for standard shortcuts (`HOME`, `$HOME`, or `~`).
-- **Local Project Config**: Automatically generates `.aivault.json` in your project's root to help the AI "auto-locate" the correct vault.
-- **Structured Memory**: Standardized `.md` templates for Memory, Architecture, Stack, Decisions, Progress, and Next Steps.
-- **Atomic Writes**: Data integrity protection using a write-then-rename pattern to prevent file corruption.
-- **Context-Aware Search**: Powerful search with configurable context lines (grep-style) to help the AI understand historical entries.
-- **Health Monitoring**: Built-in tools to verify vault integrity and identify missing documentation.
-- **Developer Observability**: Real-time logging to `stderr` for debugging without breaking the MCP protocol.
-- **Robust Validation**: Strict input schema validation powered by **Zod**.
+- **Project-Based Organization** — manage multiple development vaults independently.
+- **Custom Vault Paths** — store memory anywhere on the system; supports `~`, `$HOME`, and `HOME` shortcuts.
+- **Auto-Location via `.aivault.json`** — automatically generated config file at the project root, letting the AI identify the correct vault without manual configuration every session.
+- **Structured Memory** — standardized Markdown templates for Memory, Architecture, Stack, Decisions, Progress, and Next Steps.
+- **Atomic Writes** — write-then-rename pattern prevents file corruption on concurrent access.
+- **Context-Aware Search** — grep-style search with configurable context lines.
+- **Health Monitoring** — audit tool that identifies incomplete documentation.
+- **Observability** — real-time logging to `stderr` without breaking the MCP protocol.
+- **Robust Validation** — strict input schema validation powered by [Zod](https://zod.dev/).
+
+## 🛠️ Tools
+
+| Tool | Description |
+|---|---|
+| `list_projects` | List all projects managed in the vault |
+| `create_project` | Create a new project with standard memory files |
+| `delete_project` | Remove a project from the vault |
+| `list_files` | List memory files within a project |
+| `init_project_memory` | Guided initialization of a new project knowledge base |
+| `read_memory` | Read a memory file |
+| `write_memory` | Overwrite a memory file |
+| `append_memory` | Append entries to a file without overwriting |
+| `delete_memory` | Delete a custom memory file |
+| `search_memory` | Search across the vault with context line support |
+| `load_project_context` | Consolidate a full project state into a single context block |
+| `health_check` | Audit project memory completeness |
 
 ## ⚙️ Custom Paths & Auto-Location
 
-Lumina AI Vault is flexible about where it stores your data:
+### Vault Path Configuration
 
-### Custom Vault Path
-By default, data is saved in `~/.lumina-aivault/knowledge`. You can override this:
-1.  **Global Override**: Set the `AIVAULT_BASE_PATH` environment variable.
-2.  **Per-Tool Override**: All tools accept an optional `path` parameter.
-3.  **Path Shortcuts**: In any path parameter, you can use `HOME`, `$HOME`, or `~` at the beginning (e.g., `~/vaults/my-project`). The `HOME` keyword is case-insensitive.
+Data is stored in `~/.lumina-aivault/knowledge` by default. You can override this in three ways:
+
+| Method | How |
+|---|---|
+| Global override | Set the `AIVAULT_BASE_PATH` environment variable |
+| Per-tool override | Pass the optional `path` parameter to any tool |
+| Shortcut support | Use `~`, `$HOME`, or `HOME` at the start of any path |
 
 ### Local Configuration (`.aivault.json`)
-When using `init_project_memory`, if the AI provides the `workspace_root` (your project's local folder), the server will create a `.aivault.json` file. 
 
-**Example `.aivault.json`:**
+When using `init_project_memory` with a `workspace_root` argument, the server creates a `.aivault.json` file at your project root:
+
 ```json
 {
   "project": "nebula-engine",
   "path": "HOME/.lumina-aivault/knowledge"
 }
 ```
-This file allows the AI assistant to automatically identify the project name and the vault path as soon as it reads the project files, eliminating the need for manual configuration in every session.
 
-## 🛠️ Tools
+This file lets the AI automatically identify the project name and vault path in every future session — no manual setup needed.
 
-The server provides the following tools to the AI assistant:
+## 📦 Installation
 
-- `init_project_memory`: Guided initialization of a new project's knowledge base.
-- `list_projects`: View all managed projects in the vault.
-- `create_project`: Create a new vault with standard memory files.
-- `read_memory` / `write_memory`: Basic I/O for memory files.
-- `append_memory`: Add entries to logs (like decisions or progress) without overwriting.
-- `search_memory`: Search across the vault with context line support.
-- `check_project_health`: Audit a project's memory completeness.
-- `load_project_context`: Consolidate a whole project's state into a single context block.
-
-## 💡 Prompt Examples
-
-You can use these prompts to help your AI assistant interact with the Vault:
-
-### Initializing a Project
-> "I'm starting a new project called 'nebula-engine'. Use the `init_project_memory` tool to set up its initial documentation. I'll provide the details as you ask the questions."
-
-### Recording a Decision
-> "We just decided to switch from REST to gRPC for the internal communication. Use `append_memory` to record this in `decisions.md` of the 'nebula-engine' project, explaining that the move is for lower latency."
-
-### Contextual Retrieval
-> "I need to work on the database layer. Search the 'nebula-engine' vault for 'PostgreSQL' using 3 lines of context to remind me of our schema decisions."
-
-### Project Onboarding
-> "I'm back to work on the 'lumina-web' project. Please use `load_project_context` to refresh your memory on the current state and next steps."
-
-## 📦 Getting Started
-
-### Installation
+### Option 1 — Run directly with npx (recommended, no install needed)
 
 ```bash
+npx lumina-ai-vault
+```
+
+### Option 2 — Global install
+
+```bash
+npm install -g lumina-ai-vault
+```
+
+After installation, the binary `lumina-aivault` will be available globally.
+
+### Option 3 — From source
+
+```bash
+git clone https://github.com/kaduvelasco/lumina-ai-vault.git
+cd lumina-ai-vault
 npm install
 npm run build
 ```
 
-### Configuration
+The compiled server will be at `dist/index.js`.
 
-To use Lumina AI Vault, you need to add it to your MCP client configuration. Below are examples for the most popular tools.
+## 🔧 Client Configuration
 
-#### Claude Desktop
-Add this to your `claude_desktop_config.json`:
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+### Claude Code CLI
 
-```json
-{
-  "mcpServers": {
-    "lumina-aivault": {
-      "command": "node",
-      "args": ["/absolute/path/to/lumina-ai-vault/dist/index.js"]
-    }
-  }
-}
-```
-
-#### Claude Code CLI
-Claude Code CLI automatically detects MCP servers configured in Claude Desktop. You can also configure it directly via the CLI:
+**Via command line (recommended):**
 
 ```bash
-claude mcp add lumina-aivault node /absolute/path/to/lumina-ai-vault/dist/index.js
+# Using npx (no install required)
+claude mcp add lumina-aivault npx -- -y lumina-ai-vault
+
+# Using global install
+claude mcp add lumina-aivault lumina-aivault
+
+# Using source build
+claude mcp add lumina-aivault node -- /absolute/path/to/lumina-ai-vault/dist/index.js
 ```
 
-#### Gemini Code Assist
-Configure the MCP server through the Gemini Code Assist extension settings in your IDE (VS Code, IntelliJ) by pointing to the executable.
-
-#### Windsurf
-Add to your `~/.codeium/windsurf.json` or through the Windsurf MCP configuration UI:
+**Via configuration file** — add to `.claude/settings.json` (project-level) or `~/.claude/settings.json` (user-level):
 
 ```json
 {
   "mcpServers": {
     "lumina-aivault": {
-      "command": "node",
-      "args": ["/absolute/path/to/lumina-ai-vault/dist/index.js"]
+      "command": "npx",
+      "args": ["-y", "lumina-ai-vault"]
     }
   }
 }
 ```
 
-#### OpenCode (CLI & Desktop)
-OpenCode allows configuring MCP servers via its settings panel or through the CLI configuration file:
+> To verify the server is running: `claude mcp list`
+
+---
+
+### Gemini CLI
+
+Edit `~/.gemini/settings.json`:
 
 ```json
 {
-  "servers": {
+  "mcpServers": {
     "lumina-aivault": {
-      "command": "node",
-      "args": ["/absolute/path/to/lumina-ai-vault/dist/index.js"]
+      "command": "npx",
+      "args": ["-y", "lumina-ai-vault"]
     }
   }
 }
 ```
+
+> Restart Gemini CLI after editing the file for changes to take effect.
+
+---
+
+### Codex CLI
+
+Edit `~/.codex/config.yaml`:
+
+```yaml
+mcp_servers:
+  lumina-aivault:
+    command: npx
+    args:
+      - "-y"
+      - lumina-ai-vault
+```
+
+To set a custom vault path via environment variable:
+
+```yaml
+mcp_servers:
+  lumina-aivault:
+    command: npx
+    args:
+      - "-y"
+      - lumina-ai-vault
+    env:
+      AIVAULT_BASE_PATH: "/your/custom/path"
+```
+
+---
+
+### OpenCode CLI
+
+Edit `~/.config/opencode/config.json`:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "lumina-aivault": {
+        "type": "local",
+        "command": "npx",
+        "args": ["-y", "lumina-ai-vault"]
+      }
+    }
+  }
+}
+```
+
+---
+
+### OpenCode Desktop
+
+Open **Settings → MCP Servers** in the OpenCode Desktop interface and add a new server entry:
+
+| Field | Value |
+|---|---|
+| Name | `lumina-aivault` |
+| Type | `stdio` |
+| Command | `npx` |
+| Arguments | `-y lumina-ai-vault` |
+
+Alternatively, edit the configuration file directly — same format as OpenCode CLI above.
+
+---
+
+### Windsurf
+
+Edit `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "lumina-aivault": {
+      "command": "npx",
+      "args": ["-y", "lumina-ai-vault"]
+    }
+  }
+}
+```
+
+You can also configure it through the Windsurf interface: **Settings → MCP → Add Server**.
+
+---
+
+### Setting a Custom Vault Path
+
+All clients support passing environment variables to the server. Use `AIVAULT_BASE_PATH` to change the default storage location:
+
+```json
+{
+  "mcpServers": {
+    "lumina-aivault": {
+      "command": "npx",
+      "args": ["-y", "lumina-ai-vault"],
+      "env": {
+        "AIVAULT_BASE_PATH": "/home/user/my-vaults"
+      }
+    }
+  }
+}
+```
+
+## 💡 Prompt Examples
+
+The following prompts are designed to work directly with the tools exposed by Lumina AI Vault. Paste them into any configured AI assistant.
+
+---
+
+### Starting a New Project
+
+> Initialize the memory vault for a new project. Use `init_project_memory` with the following details: project name is "nebula-engine", it's a REST API built with Node.js and PostgreSQL, the goal is to provide a real-time data pipeline for IoT devices, and the workspace root is `/home/user/projects/nebula-engine`.
+
+---
+
+### Resuming Work After a Break
+
+> I'm back to work on the "nebula-engine" project. Use `load_project_context` to load the full context from the vault, then summarize: what was the last completed task, what are the next steps, and are there any open architectural decisions?
+
+---
+
+### Recording an Architectural Decision
+
+> We just decided to replace the REST polling pattern with WebSockets for real-time device updates. Use `append_memory` to record this decision in `decisions.md` of the "nebula-engine" project. Include: what was decided, why (lower latency, reduced server load), and what alternatives were rejected (SSE — browser compat issues).
+
+---
+
+### Updating Progress
+
+> I just finished implementing the device authentication middleware with JWT. Use `append_memory` to log this in `progress.md` of the "nebula-engine" project with today's date, what was done, and the files changed: `src/middleware/auth.ts` and `src/routes/devices.ts`.
+
+---
+
+### Searching for Past Decisions
+
+> Search the "nebula-engine" vault for the keyword "PostgreSQL" using 4 lines of context. I want to understand what schema decisions we made around the device_events table.
+
+---
+
+### Updating Architecture Documentation
+
+> Use `write_memory` to update the `architecture.md` file of the "nebula-engine" project with the following structure: the system has three layers — API Gateway (Express), Business Logic (services), and Data Layer (PostgreSQL + Redis for caching). Include a brief description of each layer's responsibility.
+
+---
+
+### Running a Health Check
+
+> Use `health_check` on the "nebula-engine" project to audit its documentation completeness. List any files that are missing or empty, and suggest what content each one should have.
+
+---
+
+### Listing and Switching Between Projects
+
+> Use `list_projects` to show all projects in the vault, then load the context of "lumina-web" using `load_project_context`. Compare the next steps of both projects and tell me which one has more urgent pending work.
+
+---
+
+### Adding Items to Next Steps
+
+> Use `append_memory` to add three new items to the `next_steps.md` file of the "nebula-engine" project: (1) implement rate limiting on the device endpoints, (2) add integration tests for the WebSocket handlers, (3) document the deployment process in the wiki.
+
+---
+
+### Documenting the Technical Stack
+
+> Use `write_memory` to update `stack.md` of the "nebula-engine" project with the following stack: Node.js 20 + TypeScript, Express 5, PostgreSQL 16, Redis 7, Docker + Docker Compose for local development, GitHub Actions for CI/CD.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 

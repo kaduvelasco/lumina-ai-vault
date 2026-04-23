@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BaseToolHandler } from "./base.js";
 import { readMemory, MEMORY_FILES, resolveBasePath } from "../vault.js";
+import { PATH_DESCRIPTION } from "./constants.js";
 
 export class ReadMemoryHandler extends BaseToolHandler<
   z.ZodObject<{
@@ -17,7 +18,7 @@ export class ReadMemoryHandler extends BaseToolHandler<
       .string()
       .min(1)
       .describe(`File to read. Standard files: ${MEMORY_FILES.join(", ")}`),
-    path: z.string().optional().describe('Base path where the memory is stored. If left blank, uses the default vault path. To use the default user directory, start the path with "HOME" (e.g., "HOME/custom-vault").'),
+    path: z.string().optional().describe(PATH_DESCRIPTION),
   });
 
   constructor(private basePath: string) {

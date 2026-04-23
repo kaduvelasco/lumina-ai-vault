@@ -1,6 +1,8 @@
 # ==============================================================================
-# .gitignore — lumina-ai-vault
-# Projeto: MCP server TypeScript para memória persistente de projetos de IA
+# .gitignore — LuminaDev
+#
+# Modelo padrão para projetos PHP/Moodle.
+# Gerado automaticamente pelo comando 'lumina git' em cada repositório.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -33,40 +35,95 @@ $RECYCLE.BIN/
 # Dependências
 # ------------------------------------------------------------------------------
 node_modules/
+vendor/
+bower_components/
 
 # ------------------------------------------------------------------------------
-# Build e artefatos gerados
+# Build, cache e temporários
 # ------------------------------------------------------------------------------
-dist/
-*.tsbuildinfo
-*.js.map
-*.d.ts.map
-
-# ------------------------------------------------------------------------------
-# Cache e temporários
-# ------------------------------------------------------------------------------
-.cache/
-.tmp/
-tmp/
+/dist/
+/build/
+/.cache/
+/.tmp/
+/tmp/
 *.log
 *.log.*
 
 # ------------------------------------------------------------------------------
-# Node / npm
+# Moodle específico
+# ------------------------------------------------------------------------------
+/moodledata/
+/config.php
+/local/
+/theme/*/style/
+*.session
+
+# ------------------------------------------------------------------------------
+# PHP
+# ------------------------------------------------------------------------------
+/composer.lock
+.env
+.env.*
+*.env
+
+# ------------------------------------------------------------------------------
+# JavaScript / Node
 # ------------------------------------------------------------------------------
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+yarn.lock
+package-lock.json
 .npm/
 .yarn/
-.pnp.*
 
 # ------------------------------------------------------------------------------
-# Variáveis de ambiente
+# Ferramentas de IA (configs locais, histórico e instruções de agentes)
 # ------------------------------------------------------------------------------
-.env
-.env.*
-*.env
+
+# Arquivos de instrução de agentes IA
+CLAUDE.md
+CODEX.md
+AGENTS.md
+GEMINI.md
+
+# Arquivos de exclusão de contexto para IA
+.aiexclude
+.geminiignore
+.aignore
+.aiignore
+
+# Claude Code (Anthropic)
+.claude/
+
+# OpenAI Codex
+.codex
+.codex/
+
+# Google Gemini
+.gemini/
+
+# Cursor AI
+.cursor/
+.cursorrules
+.cursorignore
+
+# Windsurf (Codeium)
+.windsurfrules
+.windsurf/
+
+# Aider
+.aider*
+aider.conf.yml
+
+# Continue.dev
+.continue/
+
+# Codeium
+.codeium/
+
+# Tabnine
+.tabnine/
 
 # ------------------------------------------------------------------------------
 # Credenciais e segurança
@@ -81,3 +138,4 @@ secrets.*
 *.secret
 .htpasswd
 auth.json
+wp-config.php

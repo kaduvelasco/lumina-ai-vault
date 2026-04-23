@@ -39,34 +39,35 @@ export abstract class BaseToolHandler<T extends z.ZodTypeAny> {
   }
 
   private getJsonSchema() {
-    // This is a simplified conversion for the MCP protocol.
-    // For complex schemas, consider using 'zod-to-json-schema' package.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const shape = (this.inputSchema as any)._def.shape?.();
+    const shape = (this.inputSchema as z.ZodObject<z.ZodRawShape>).shape;
     if (!shape) return { type: "object", properties: {} };
 
     const properties: Record<string, { type: string; description?: string }> = {};
     const required: string[] = [];
 
-    for (const [key, value] of Object.entries(shape)) {
-      const zValue = value as z.ZodTypeAny;
-      const description = zValue.description;
+    for (const [key, raw] of Object.entries(shape)) {
+      const field = raw as z.ZodTypeAny;
+      const description = field.description;
+
+      // Unwrap ZodOptional / ZodDefault to determine the underlying type
+      let inner: z.ZodTypeAny = field;
+      while (inner instanceof z.ZodOptional || inner instanceof z.ZodDefault) {
+        inner = (inner as z.ZodOptional<z.ZodTypeAny>).unwrap();
+      }
 
       let type = "string";
-      if (zValue instanceof z.ZodNumber) type = "number";
-      if (zValue instanceof z.ZodBoolean) type = "boolean";
-      if (zValue instanceof z.ZodArray) type = "array";
-      if (zValue instanceof z.ZodObject) type = "object";
+      if (inner instanceof z.ZodNumber) type = "number";
+      if (inner instanceof z.ZodBoolean) type = "boolean";
+      if (inner instanceof z.ZodArray) type = "array";
+      if (inner instanceof z.ZodObject) type = "object";
 
-      properties[key] = {
-        type,
-        ...(description ? { description } : {}),
-      };
+      properties[key] = { type, ...(description ? { description } : {}) };
 
-      if (!zValue.isOptional()) {
+      if (!field.isOptional()) {
         required.push(key);
       }
     }
+
     return {
       type: "object",
       properties,

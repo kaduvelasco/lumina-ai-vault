@@ -14,23 +14,20 @@ import { logger } from "./logger.js";
 export function createServer(basePath: string) {
   logger.info(`Starting Lumina AI Vault server at ${basePath}`);
 
-  const server = new Server(
-    { name: "lumina-aivault", version },
-    { capabilities: { tools: {} } }
-  );
+  const server = new Server({ name: "lumina-aivault", version }, { capabilities: { tools: {} } });
 
   const handlers = createHandlers(basePath);
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-      tools: handlers.map(h => h.getDefinition()),
+      tools: handlers.map((h) => h.getDefinition()),
     };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
 
-    const handler = handlers.find(h => h.name === name);
+    const handler = handlers.find((h) => h.name === name);
     if (!handler) {
       logger.warn(`Tool not found: ${name}`);
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
@@ -43,10 +40,12 @@ export function createServer(basePath: string) {
       if (err instanceof z.ZodError) {
         logger.warn(`Invalid parameters for ${name}`, err.issues);
         return {
-          content: [{ 
-            type: "text", 
-            text: `Invalid parameters: ${err.issues.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`).join(', ')}` 
-          }],
+          content: [
+            {
+              type: "text",
+              text: `Invalid parameters: ${err.issues.map((e: z.ZodIssue) => `${e.path.join(".")}: ${e.message}`).join(", ")}`,
+            },
+          ],
           isError: true,
         };
       }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BaseToolHandler } from "./base.js";
 import { loadProjectContext, resolveBasePath } from "../vault.js";
+import { PATH_DESCRIPTION } from "./constants.js";
 
 export class LoadProjectContextHandler extends BaseToolHandler<
   z.ZodObject<{
@@ -13,7 +14,7 @@ export class LoadProjectContextHandler extends BaseToolHandler<
     "Load all memory files for a project concatenated into a single context block. Files that still contain only the blank template are omitted.";
   public readonly inputSchema = z.object({
     project: z.string().min(1).describe("Project name"),
-    path: z.string().optional().describe('Base path where the memory is stored. If left blank, uses the default vault path. To use the default user directory, start the path with "HOME" (e.g., "HOME/custom-vault").'),
+    path: z.string().optional().describe(PATH_DESCRIPTION),
   });
 
   constructor(private basePath: string) {

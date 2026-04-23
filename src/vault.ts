@@ -11,7 +11,7 @@ import {
   rm,
   rename,
 } from "fs/promises";
-import { join, resolve, dirname } from "path";
+import { join, resolve } from "path";
 import { homedir } from "os";
 import { logger } from "./logger.js";
 
@@ -467,13 +467,13 @@ export async function searchMemory(
         const line = lines[i] ?? "";
         if (line.toLowerCase().includes(lowerQuery)) {
           const result: SearchResult = { project: proj, file, line: i + 1, text: line.trim() };
-          
+
           if (contextLines > 0) {
             const start = Math.max(0, i - contextLines);
             const end = Math.min(lines.length, i + contextLines + 1);
             result.context = lines.slice(start, end);
           }
-          
+
           results.push(result);
           if (results.length === cap) break outer;
         }

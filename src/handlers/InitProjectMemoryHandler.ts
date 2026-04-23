@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BaseToolHandler } from "./base.js";
 import { initProjectMemory, InitAnswers, resolveBasePath } from "../vault.js";
+import { PATH_DESCRIPTION } from "./constants.js";
 
 export class InitProjectMemoryHandler extends BaseToolHandler<
   z.ZodObject<{
@@ -36,8 +37,13 @@ Only files that are empty or contain the blank template will be written — exis
 
   public readonly inputSchema = z.object({
     project: z.string().min(1).describe("Project name (alphanumeric, hyphens, underscores)"),
-    path: z.string().optional().describe('Base path where the memory will be saved. If left blank, uses the default vault path. To use the default user directory, start the path with "HOME" (e.g., "HOME/custom-vault").'),
-    workspace_root: z.string().optional().describe("Local root directory of the project where .aivault.json will be created (optional)."),
+    path: z.string().optional().describe(PATH_DESCRIPTION),
+    workspace_root: z
+      .string()
+      .optional()
+      .describe(
+        "Local root directory of the project where .aivault.json will be created (optional)."
+      ),
     description: z.string().optional().describe("What the project does"),
     goal: z.string().optional().describe("Main goal or objective"),
     phase: z.string().optional().describe("Current phase: planning / mvp / active / maintenance"),
@@ -74,9 +80,8 @@ Only files that are empty or contain the blank template will be written — exis
       projectName,
       answers,
       args.workspace_root,
-      args.path
+      args.path ? resolvedPath : undefined
     );
     return { content: [{ type: "text", text: message }] };
   }
 }
-

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BaseToolHandler } from "./base.js";
 import { deleteMemory, MEMORY_FILES, resolveBasePath } from "../vault.js";
+import { PATH_DESCRIPTION } from "./constants.js";
 
 export class DeleteMemoryHandler extends BaseToolHandler<
   z.ZodObject<{
@@ -14,7 +15,7 @@ export class DeleteMemoryHandler extends BaseToolHandler<
   public readonly inputSchema = z.object({
     project: z.string().min(1).describe("Project name"),
     filename: z.string().min(1).describe("File to delete (must be a .md file)"),
-    path: z.string().optional().describe('Base path where the memory is stored. If left blank, uses the default vault path. To use the default user directory, start the path with "HOME" (e.g., "HOME/custom-vault").'),
+    path: z.string().optional().describe(PATH_DESCRIPTION),
   });
 
   constructor(private basePath: string) {
