@@ -11,6 +11,8 @@ import { InitProjectMemoryHandler } from "./InitProjectMemoryHandler.js";
 import { LoadProjectContextHandler } from "./LoadProjectContextHandler.js";
 import { HealthCheckHandler } from "./HealthCheckHandler.js";
 import { GetVaultConfigHandler } from "./GetVaultConfigHandler.js";
+import { UpdateProjectMemoryHandler } from "./UpdateProjectMemoryHandler.js";
+import { UnregisterSubProjectHandler } from "./UnregisterSubProjectHandler.js";
 import { BaseToolHandler } from "./base.js";
 import { z } from "zod";
 
@@ -29,5 +31,7 @@ export function createHandlers(basePath: string): BaseToolHandler<z.ZodTypeAny>[
     new LoadProjectContextHandler(basePath),
     new HealthCheckHandler(basePath),
     new GetVaultConfigHandler(basePath),
+    new UpdateProjectMemoryHandler(basePath),
+    new UnregisterSubProjectHandler(basePath),
   ];
 }

@@ -5,6 +5,12 @@ import * as vault from "../vault.js";
 vi.mock("../vault.js", () => ({
   checkProjectHealth: vi.fn(),
   resolveBasePath: vi.fn((p: string) => `/resolved${p}`),
+  readLocalConfig: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("../config.js", () => ({
+  readGlobalConfig: vi.fn().mockResolvedValue({}),
+  updateLastProject: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("HealthCheckHandler", () => {
@@ -23,7 +29,7 @@ describe("HealthCheckHandler", () => {
 
   it("should validate input correctly", () => {
     expect(() => handler.validate({ project: "my-project" })).not.toThrow();
-    expect(() => handler.validate({})).toThrow();
+    expect(() => handler.validate({})).not.toThrow();
     expect(() => handler.validate({ project: "" })).toThrow();
   });
 
@@ -46,7 +52,7 @@ describe("HealthCheckHandler", () => {
     expect(vault.checkProjectHealth).toHaveBeenCalledWith(basePath, "my-project");
     expect(result.content[0]!.text).toContain("HEALTHY");
     expect(result.content[0]!.text).toContain("memory.md");
-    expect(result.isError).toBeFalsy();
+    expect((result as { isError?: boolean }).isError).toBeFalsy();
   });
 
   it("should report an unhealthy project with missing files", async () => {
@@ -68,7 +74,7 @@ describe("HealthCheckHandler", () => {
     expect(result.content[0]!.text).toContain("UNHEALTHY");
     expect(result.content[0]!.text).toContain("MISSING");
     expect(result.content[0]!.text).toContain("Recommendation");
-    expect(result.isError).toBe(true);
+    expect((result as { isError?: boolean }).isError).toBe(true);
   });
 
   it("should use the custom path when provided", async () => {
@@ -105,5 +111,10 @@ describe("HealthCheckHandler", () => {
     await expect(handler.execute({ project: "unknown" })).rejects.toThrow(
       'Project not found: "unknown"'
     );
+  });
+
+  it("should return needs-input message when no project can be discovered", async () => {
+    const result = await handler.execute({});
+    expect(result.content[0]!.text).toContain("Could not determine");
   });
 });

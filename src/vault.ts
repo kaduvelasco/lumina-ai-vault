@@ -11,7 +11,7 @@ import {
   rm,
   rename,
 } from "fs/promises";
-import { join, resolve } from "path";
+import { join, resolve, relative, dirname } from "path";
 import { homedir } from "os";
 import { logger } from "./logger.js";
 
@@ -117,6 +117,154 @@ async function atomicWrite(filePath: string, content: string): Promise<void> {
     }
     throw err;
   }
+}
+
+export interface SubProjectConfig {
+  project: string;
+  path?: string;
+}
+
+export interface LocalVaultConfig {
+  project: string;
+  path?: string;
+  subprojects?: Record<string, SubProjectConfig>;
+}
+
+export interface ResolvedLocalConfig {
+  project: string;
+  path?: string;
+  configRoot: string;
+  isSubProject: boolean;
+  subProjectKey?: string;
+}
+
+/**
+ * Walks up from workspaceRoot to find .aivault.json, then resolves the active
+ * project — either the root project or a registered sub-project — based on the
+ * relative path between the config location and workspaceRoot.
+ */
+export async function readLocalConfig(workspaceRoot: string): Promise<ResolvedLocalConfig | null> {
+  let dir = resolve(workspaceRoot);
+
+  while (true) {
+    const configPath = join(dir, ".aivault.json");
+    if (existsSync(configPath)) {
+      try {
+        const raw = await readFile(configPath, "utf-8");
+        const parsed = JSON.parse(raw) as LocalVaultConfig;
+
+        if (typeof parsed.project !== "string" || !parsed.project.trim()) return null;
+
+        const relPath = relative(dir, resolve(workspaceRoot)).replace(/\\/g, "/");
+
+        // Check if workspace_root falls inside a registered sub-project
+        if (parsed.subprojects && relPath) {
+          let matchedKey: string | undefined;
+          let longestMatch = -1;
+
+          for (const key of Object.keys(parsed.subprojects)) {
+            const normalizedKey = key.replace(/\\/g, "/");
+            if (relPath === normalizedKey || relPath.startsWith(normalizedKey + "/")) {
+              if (normalizedKey.length > longestMatch) {
+                longestMatch = normalizedKey.length;
+                matchedKey = key;
+              }
+            }
+          }
+
+          if (matchedKey) {
+            const sub = parsed.subprojects[matchedKey]!;
+            if (typeof sub.project !== "string" || !sub.project.trim()) return null;
+            const result: ResolvedLocalConfig = {
+              project: sub.project.trim(),
+              configRoot: dir,
+              isSubProject: true,
+              subProjectKey: matchedKey,
+            };
+            if (sub.path) result.path = sub.path;
+            return result;
+          }
+        }
+
+        // Root project (workspaceRoot == configRoot or unregistered sub-directory)
+        const result: ResolvedLocalConfig = {
+          project: parsed.project.trim(),
+          configRoot: dir,
+          isSubProject: false,
+        };
+        if (parsed.path) result.path = parsed.path;
+        return result;
+      } catch {
+        return null;
+      }
+    }
+
+    const parent = dirname(dir);
+    if (parent === dir) break; // reached filesystem root
+    dir = parent;
+  }
+
+  return null;
+}
+
+/**
+ * Adds or updates a sub-project entry in an existing .aivault.json file.
+ */
+export async function unregisterSubProject(
+  configRoot: string,
+  subProjectKey: string
+): Promise<void> {
+  const configPath = join(configRoot, ".aivault.json");
+  if (!existsSync(configPath)) {
+    throw new Error(`No .aivault.json found at ${configRoot}`);
+  }
+
+  let config: LocalVaultConfig;
+  try {
+    config = JSON.parse(await readFile(configPath, "utf-8")) as LocalVaultConfig;
+  } catch {
+    throw new Error(`Failed to read .aivault.json at ${configRoot}`);
+  }
+
+  if (!config.subprojects || !(subProjectKey in config.subprojects)) {
+    throw new Error(`Sub-project "${subProjectKey}" not found in ${configPath}`);
+  }
+
+  delete config.subprojects[subProjectKey];
+  if (Object.keys(config.subprojects).length === 0) {
+    delete config.subprojects;
+  }
+
+  await atomicWrite(configPath, JSON.stringify(config, null, 2));
+  logger.info(`Unregistered sub-project "${subProjectKey}" from ${configPath}`);
+}
+
+export async function registerSubProject(
+  configRoot: string,
+  subProjectKey: string,
+  subProject: SubProjectConfig
+): Promise<void> {
+  const configPath = join(configRoot, ".aivault.json");
+  let existing: LocalVaultConfig = { project: "" };
+
+  if (existsSync(configPath)) {
+    try {
+      existing = JSON.parse(await readFile(configPath, "utf-8")) as LocalVaultConfig;
+    } catch {
+      // keep empty default
+    }
+  }
+
+  const updated: LocalVaultConfig = {
+    ...existing,
+    subprojects: {
+      ...(existing.subprojects ?? {}),
+      [subProjectKey]: subProject,
+    },
+  };
+
+  await atomicWrite(configPath, JSON.stringify(updated, null, 2));
+  logger.info(`Registered sub-project "${subProject.project}" at key "${subProjectKey}" in ${configPath}`);
 }
 
 export function resolveBasePath(envPath?: string): string {
@@ -393,15 +541,19 @@ ${toList(answers.nextSteps)}
   if (workspaceRoot) {
     try {
       const configPath = join(workspaceRoot, ".aivault.json");
-      const configContent = JSON.stringify(
-        {
-          project,
-          path: originalPath || basePath,
-        },
-        null,
-        2
-      );
-      await atomicWrite(configPath, configContent);
+      // Preserve existing subprojects when updating the config
+      let existingSubprojects: Record<string, SubProjectConfig> | undefined;
+      if (existsSync(configPath)) {
+        try {
+          const existing = JSON.parse(await readFile(configPath, "utf-8")) as LocalVaultConfig;
+          existingSubprojects = existing.subprojects;
+        } catch {
+          // ignore, will overwrite
+        }
+      }
+      const configData: LocalVaultConfig = { project, path: originalPath || basePath };
+      if (existingSubprojects) configData.subprojects = existingSubprojects;
+      await atomicWrite(configPath, JSON.stringify(configData, null, 2));
       extra = ` and local config ".aivault.json" created at ${workspaceRoot}`;
     } catch (err) {
       logger.error(`Failed to create local config at ${workspaceRoot}`, err);

@@ -6,6 +6,13 @@ import * as projectAnalyzer from "../analyzers/projectAnalyzer.js";
 vi.mock("../vault.js", () => ({
   initProjectMemory: vi.fn(),
   resolveBasePath: vi.fn((p: string) => `/resolved${p}`),
+  readLocalConfig: vi.fn().mockResolvedValue(null),
+  registerSubProject: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("../config.js", () => ({
+  readGlobalConfig: vi.fn().mockResolvedValue({}),
+  updateLastProject: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../analyzers/projectAnalyzer.js", () => ({

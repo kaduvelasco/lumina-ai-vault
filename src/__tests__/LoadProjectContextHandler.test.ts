@@ -4,6 +4,13 @@ import * as vault from "../vault.js";
 
 vi.mock("../vault.js", () => ({
   loadProjectContext: vi.fn(),
+  readLocalConfig: vi.fn().mockResolvedValue(null),
+  resolveBasePath: vi.fn((p: string) => `/resolved${p}`),
+}));
+
+vi.mock("../config.js", () => ({
+  readGlobalConfig: vi.fn().mockResolvedValue({}),
+  updateLastProject: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("LoadProjectContextHandler", () => {
@@ -22,5 +29,12 @@ describe("LoadProjectContextHandler", () => {
 
     expect(vault.loadProjectContext).toHaveBeenCalledWith(basePath, "p");
     expect(result.content[0]!.text).toBe("# Context: p\n\nContent");
+  });
+
+  it("should return needs-input message when no project can be discovered", async () => {
+    const result = await handler.execute({});
+
+    expect(result.content[0]!.text).toContain("Could not determine");
+    expect(vault.loadProjectContext).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,13 @@ import * as vault from "../vault.js";
 vi.mock("../vault.js", () => ({
   writeMemory: vi.fn(),
   MEMORY_FILES: ["memory.md"],
+  readLocalConfig: vi.fn().mockResolvedValue(null),
+  resolveBasePath: vi.fn((p: string) => `/resolved${p}`),
+}));
+
+vi.mock("../config.js", () => ({
+  readGlobalConfig: vi.fn().mockResolvedValue({}),
+  updateLastProject: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("WriteMemoryHandler", () => {
@@ -32,5 +39,12 @@ describe("WriteMemoryHandler", () => {
       "new content"
     );
     expect(result.content[0]!.text).toContain("Written: my-project/test.md");
+  });
+
+  it("should return needs-input message when no project can be discovered", async () => {
+    const result = await handler.execute({ filename: "memory.md", content: "x" });
+
+    expect(result.content[0]!.text).toContain("Could not determine");
+    expect(vault.writeMemory).not.toHaveBeenCalled();
   });
 });

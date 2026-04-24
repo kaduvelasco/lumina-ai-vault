@@ -1,12 +1,30 @@
 import { z } from "zod";
+import { resolve, relative } from "path";
 import { BaseToolHandler } from "./base.js";
-import { initProjectMemory, InitAnswers, resolveBasePath } from "../vault.js";
+import {
+  initProjectMemory,
+  InitAnswers,
+  resolveBasePath,
+  readLocalConfig,
+  registerSubProject,
+  SubProjectConfig,
+} from "../vault.js";
+import { readGlobalConfig, updateLastProject } from "../config.js";
 import { analyzeProject } from "../analyzers/projectAnalyzer.js";
 import { PATH_DESCRIPTION } from "./constants.js";
+import { logger } from "../logger.js";
+
+const NEEDS_PROJECT_MESSAGE = `Could not determine the project name automatically.
+
+Please provide one of the following:
+- "workspace_root": path to your project folder — the tool will read .aivault.json if present, or create one after initialization
+- "project": explicit project name to initialize
+
+If this is a brand-new project with no .aivault.json yet, provide both "project" and "workspace_root" so the tool can create the config file for you.`;
 
 export class InitProjectMemoryHandler extends BaseToolHandler<
   z.ZodObject<{
-    project: z.ZodString;
+    project: z.ZodOptional<z.ZodString>;
     path: z.ZodOptional<z.ZodString>;
     workspace_root: z.ZodOptional<z.ZodString>;
     auto_detect: z.ZodOptional<z.ZodBoolean>;
@@ -33,13 +51,25 @@ If global_vault_configured is true, ask the user:
   - If yes: pass that path as the \`path\` argument.
   - If no: leave \`path\` empty to use the current default.
 
---- STEP 2: PROJECT DATA ---
+--- STEP 2: PROJECT / SUB-PROJECT DISCOVERY ---
+Always provide workspace_root if you know the project folder.
+
+The tool will automatically detect whether this is:
+  - A NEW TOP-LEVEL PROJECT: no .aivault.json found in any parent directory.
+    → Creates vault + .aivault.json at workspace_root.
+  - A NEW SUB-PROJECT: a .aivault.json exists in a parent directory (e.g. the repo root),
+    but workspace_root is not yet registered.
+    → Creates vault for the sub-project and registers it in the parent's .aivault.json.
+    → Explicitly provide "path" if the sub-project vault should be stored at a custom location.
+  - AN EXISTING PROJECT / SUB-PROJECT RE-INIT: already registered in .aivault.json.
+    → Re-initializes only files that are empty or still contain the blank template.
+
+--- STEP 3: PROJECT DATA ---
 Ask the user: "How do you want to define the project data?
   1. Auto-analyze the project (recommended — I will read the project files)
   2. Enter manually"
 
 If option 1:
-  - Ask: "What is the root directory of the project?" (e.g. /home/user/projects/my-app)
   - Set auto_detect: true and pass workspace_root with that path.
   - The tool will analyze the project files and fill in the data automatically.
   - Skip all the manual questions below.
@@ -59,13 +89,25 @@ If option 2:
 Only files that are empty or contain the blank template will be written — existing content is never overwritten.`;
 
   public readonly inputSchema = z.object({
-    project: z.string().min(1).describe("Project name (alphanumeric, hyphens, underscores)"),
-    path: z.string().optional().describe(PATH_DESCRIPTION),
+    project: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Project name. If omitted, auto-discovered from workspace_root (.aivault.json). Required if workspace_root is not provided."
+      ),
+    path: z
+      .string()
+      .optional()
+      .describe(
+        PATH_DESCRIPTION +
+          " For sub-projects: specify a custom vault location different from the parent project."
+      ),
     workspace_root: z
       .string()
       .optional()
       .describe(
-        "Local root directory of the project. Required when auto_detect is true. Also used to create .aivault.json."
+        "Local root directory of the project or sub-project. Used to auto-discover .aivault.json and to detect whether this is a new sub-project. Required when auto_detect is true."
       ),
     auto_detect: z
       .boolean()
@@ -89,26 +131,68 @@ Only files that are empty or contain the blank template will be written — exis
   }
 
   async execute(args: z.infer<typeof this.inputSchema>) {
-    const projectName = args.project.trim();
-    const resolvedPath = args.path ? resolveBasePath(args.path) : this.basePath;
+    if (args.auto_detect && !args.workspace_root) {
+      return {
+        content: [{ type: "text", text: "Error: workspace_root is required when auto_detect is true." }],
+        isError: true,
+      };
+    }
 
-    let detected: InitAnswers = {};
-    if (args.auto_detect) {
-      if (!args.workspace_root) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "Error: workspace_root is required when auto_detect is true.",
-            },
-          ],
-          isError: true,
-        };
+    // --- Resolve project name and vault path ---
+    let projectName = args.project?.trim();
+    let resolvedPath = args.path ? resolveBasePath(args.path) : this.basePath;
+    let isNewSubProject = false;
+    let subProjectKey: string | undefined;
+    let subProjectConfigRoot: string | undefined;
+
+    const localConfig = args.workspace_root ? await readLocalConfig(args.workspace_root) : null;
+
+    if (localConfig) {
+      if (!projectName) {
+        projectName = localConfig.project;
+        if (localConfig.path && !args.path) resolvedPath = resolveBasePath(localConfig.path);
       }
+
+      // Detect a new sub-project: .aivault.json found in a PARENT directory and this
+      // workspace_root is not yet registered in subprojects
+      if (
+        args.workspace_root &&
+        !localConfig.isSubProject &&
+        localConfig.configRoot !== resolve(args.workspace_root)
+      ) {
+        isNewSubProject = true;
+        subProjectKey = relative(localConfig.configRoot, resolve(args.workspace_root)).replace(
+          /\\/g,
+          "/"
+        );
+        subProjectConfigRoot = localConfig.configRoot;
+        // Use the sub-project's explicit path; fall back to default vault path
+        if (!args.path) resolvedPath = this.basePath;
+      }
+    }
+
+    if (!projectName) {
+      // Fall back to lastProject for re-initialization only
+      const globalCfg = await readGlobalConfig();
+      if (globalCfg.lastProject) {
+        projectName = globalCfg.lastProject;
+        if (globalCfg.globalVaultPath && !args.path) {
+          resolvedPath = resolveBasePath(globalCfg.globalVaultPath);
+        }
+        logger.info(`init_project_memory: using last known project "${projectName}"`);
+      }
+    }
+
+    if (!projectName) {
+      return { content: [{ type: "text", text: NEEDS_PROJECT_MESSAGE }] };
+    }
+
+    // --- Auto-detect project data ---
+    let detected: InitAnswers = {};
+    if (args.auto_detect && args.workspace_root) {
       detected = await analyzeProject(args.workspace_root);
     }
 
-    // Explicit args take precedence over auto-detected values
     const answers: InitAnswers = {
       description: args.description ?? detected.description,
       goal: args.goal ?? detected.goal,
@@ -121,15 +205,35 @@ Only files that are empty or contain the blank template will be written — exis
       nextSteps: args.next_steps ?? detected.nextSteps,
     };
 
+    // For new sub-projects: don't create .aivault.json at workspace_root;
+    // register in the parent's .aivault.json instead.
+    const workspaceRootForConfig = isNewSubProject ? undefined : args.workspace_root;
+
     const message = await initProjectMemory(
       resolvedPath,
       projectName,
       answers,
-      args.workspace_root,
+      workspaceRootForConfig,
       args.path ? resolvedPath : undefined
     );
 
-    const suffix = args.auto_detect
+    // Register new sub-project in parent .aivault.json
+    let subProjectNote = "";
+    if (isNewSubProject && subProjectKey && subProjectConfigRoot) {
+      const entry: SubProjectConfig = { project: projectName };
+      if (args.path) entry.path = resolvedPath;
+      await registerSubProject(subProjectConfigRoot, subProjectKey, entry);
+      subProjectNote =
+        `\n\nSub-project "${projectName}" registered in ${subProjectConfigRoot}/.aivault.json` +
+        ` under key "${subProjectKey}".` +
+        ` Vault: ${resolvedPath}/${projectName}`;
+    }
+
+    await updateLastProject(projectName).catch((err) =>
+      logger.error("Failed to update lastProject", err)
+    );
+
+    const autoDetectNote = args.auto_detect
       ? "\n\nAuto-detected fields: " +
         Object.entries(detected)
           .filter(([, v]) => v !== undefined)
@@ -137,6 +241,6 @@ Only files that are empty or contain the blank template will be written — exis
           .join(", ")
       : "";
 
-    return { content: [{ type: "text", text: message + suffix }] };
+    return { content: [{ type: "text", text: message + subProjectNote + autoDetectNote }] };
   }
 }

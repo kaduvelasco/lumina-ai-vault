@@ -4,6 +4,13 @@ import * as vault from "../vault.js";
 
 vi.mock("../vault.js", () => ({
   listFiles: vi.fn(),
+  readLocalConfig: vi.fn().mockResolvedValue(null),
+  resolveBasePath: vi.fn((p: string) => `/resolved${p}`),
+}));
+
+vi.mock("../config.js", () => ({
+  readGlobalConfig: vi.fn().mockResolvedValue({}),
+  updateLastProject: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("ListFilesHandler", () => {
@@ -32,5 +39,12 @@ describe("ListFilesHandler", () => {
     const result = await handler.execute({ project: "my-project" });
 
     expect(result.content[0]!.text).toContain('No files found in project "my-project"');
+  });
+
+  it("should return needs-input message when no project can be discovered", async () => {
+    const result = await handler.execute({});
+
+    expect(result.content[0]!.text).toContain("Could not determine");
+    expect(vault.listFiles).not.toHaveBeenCalled();
   });
 });

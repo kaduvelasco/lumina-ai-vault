@@ -9,14 +9,14 @@
 
 📄 Portuguese version: see [LEIAME.md](LEIAME.md)
 
-**Lumina AI Vault** is a high-performance [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that acts as a **structured, persistent memory** for AI assistants during software development. It enables AI models to maintain long-term memory of project goals, architectural decisions, technical stack, and progress across multiple sessions.
+**Lumina AI Vault** is a high-performance [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that acts as a **structured, persistent memory** for AI assistants during software development. It enables AI models to maintain long-term memory of project goals, architectural decisions, technical stack, and progress across multiple sessions — with full support for **sub-projects** (plugins, packages, modules) within a single repository.
 
 ## 🚀 Features
 
-- **Project-Based Organization** — manage multiple development vaults independently.
-- **Custom Vault Paths** — store memory anywhere on the system; supports `~`, `$HOME`, and `HOME` shortcuts.
-- **Auto-Location via `.aivault.json`** — automatically generated config file at the project root, letting the AI identify the correct vault without manual configuration every session.
-- **Structured Memory** — standardized Markdown templates for Memory, Architecture, Stack, Decisions, Progress, and Next Steps.
+- **Project & Sub-Project Organization** — manage multiple projects and nested sub-projects (plugins, modules, packages) independently, each with its own dedicated vault.
+- **Auto-Discovery** — three-step resolution: reads `.aivault.json` from the workspace (walking up the directory tree), falls back to the last used project from global config, and guides the user when nothing is found.
+- **Sub-Project Detection** — place the AI in any sub-folder and it automatically identifies which sub-project (and vault) to use based on relative path matching.
+- **Custom Vault Paths** — store memory anywhere on the system; supports `~`, `$HOME`, and `HOME` shortcuts. Sub-project vaults are fully independent paths.
 - **Atomic Writes** — write-then-rename pattern prevents file corruption on concurrent access.
 - **Context-Aware Search** — grep-style search with configurable context lines.
 - **Health Monitoring** — audit tool that identifies incomplete documentation.
@@ -31,7 +31,7 @@
 | `create_project` | Create a new project with standard memory files |
 | `delete_project` | Remove a project from the vault |
 | `list_files` | List memory files within a project |
-| `init_project_memory` | Guided initialization of a new project knowledge base |
+| `init_project_memory` | Guided initialization of a project or sub-project knowledge base |
 | `read_memory` | Read a memory file |
 | `write_memory` | Overwrite a memory file |
 | `append_memory` | Append entries to a file without overwriting |
@@ -39,12 +39,94 @@
 | `search_memory` | Search across the vault with context line support |
 | `load_project_context` | Consolidate a full project state into a single context block |
 | `health_check` | Audit project memory completeness |
+| `get_vault_config` | Show current vault configuration and global settings |
+| `update_project_memory` | Save session work to the vault in a single call (progress, decisions, next steps, etc.) |
+| `unregister_subproject` | Remove a sub-project entry from `.aivault.json` (does not delete vault data) |
 
-## ⚙️ Custom Paths & Auto-Location
+## ⚙️ Auto-Discovery
+
+When `project` is not explicitly provided, all tools resolve it automatically in three steps:
+
+```
+1. workspace_root provided → walk up directories to find .aivault.json
+   → match relative path to detect active sub-project
+2. No .aivault.json found → read ~/.lumina-aivault/config.json (last used project)
+3. Neither found → return a message asking the user for project name / vault path
+```
+
+Every successful operation persists the active project as `lastProject` in `~/.lumina-aivault/config.json`, so the next session picks it up automatically.
+
+When auto-discovery is used, the tool response includes a note:
+- `[project: subproject1, from .aivault.json]` — discovered from local config
+- `[project: subproject1, from last session]` — recovered from global config
+
+## 📁 Projects & Sub-Projects
+
+### Single Project
+
+The simplest case: one project per repository. Run `init_project_memory` with `workspace_root` and a `.aivault.json` is created at the project root:
+
+```json
+{
+  "project": "project1",
+  "path": "HOME/.lumina-aivault/knowledge"
+}
+```
+
+### Sub-Projects
+
+For repositories with multiple independent components (plugins, monorepo packages, modules, etc.), the root `.aivault.json` registers each sub-project with its own vault path and relative folder key:
+
+```json
+{
+  "project": "project1",
+  "path": "HOME/.lumina-aivault/knowledge",
+  "subprojects": {
+    "module/subproject1": {
+      "project": "subproject1",
+      "path": "HOME/.lumina-aivault/knowledge"
+    },
+    "module/subproject2": {
+      "project": "subproject2",
+      "path": "HOME/.lumina-aivault/knowledge"
+    },
+    "reports/subproject3": {
+      "project": "subproject3",
+      "path": "/custom/path/for/subproject3"
+    }
+  }
+}
+```
+
+**Important:** sub-project vaults are independent — they can be stored at any path, not necessarily inside the parent project's vault.
+
+### How Sub-Project Detection Works
+
+The tool receives `workspace_root` (the directory where the AI is currently working) and:
+
+1. Walks up the directory tree until it finds `.aivault.json`
+2. Computes the relative path from the config location to `workspace_root`
+3. Matches that path against the `subprojects` keys (longest match wins)
+4. Uses the matching sub-project's vault
+
+| `workspace_root` | Result |
+|---|---|
+| `/path/project1` | Root project `project1` |
+| `/path/project1/module/subproject1` | Sub-project `subproject1` |
+| `/path/project1/module/subproject1/subdir` | Sub-project `subproject1` (prefix match) |
+| `/path/project1/reports/subproject3` | Sub-project `subproject3` |
+
+### Registering a New Sub-Project
+
+When `init_project_memory` is called with a `workspace_root` that is **inside** a project (an ancestor `.aivault.json` exists) but **not yet registered** as a sub-project:
+
+1. Creates the vault for the new sub-project
+2. Automatically registers it in the parent's `.aivault.json`
+3. Does **not** create a `.aivault.json` in the sub-project folder
+
+To store the sub-project vault at a custom location, pass the `path` argument explicitly.
 
 ### Vault Path Configuration
-
-Data is stored in `~/.lumina-aivault/knowledge` by default. You can override this in three ways:
 
 | Method | How |
 |---|---|
@@ -52,18 +134,7 @@ Data is stored in `~/.lumina-aivault/knowledge` by default. You can override thi
 | Per-tool override | Pass the optional `path` parameter to any tool |
 | Shortcut support | Use `~`, `$HOME`, or `HOME` at the start of any path |
 
-### Local Configuration (`.aivault.json`)
-
-When using `init_project_memory` with a `workspace_root` argument, the server creates a `.aivault.json` file at your project root:
-
-```json
-{
-  "project": "nebula-engine",
-  "path": "HOME/.lumina-aivault/knowledge"
-}
-```
-
-This file lets the AI automatically identify the project name and vault path in every future session — no manual setup needed.
+Default storage location: `~/.lumina-aivault/knowledge`
 
 ## 📦 Installation
 
@@ -158,19 +229,6 @@ mcp_servers:
       - lumina-ai-vault
 ```
 
-To set a custom vault path via environment variable:
-
-```yaml
-mcp_servers:
-  lumina-aivault:
-    command: npx
-    args:
-      - "-y"
-      - lumina-ai-vault
-    env:
-      AIVAULT_BASE_PATH: "/your/custom/path"
-```
-
 ---
 
 ### OpenCode CLI
@@ -195,7 +253,7 @@ Edit `~/.config/opencode/config.json`:
 
 ### OpenCode Desktop
 
-Open **Settings → MCP Servers** in the OpenCode Desktop interface and add a new server entry:
+Open **Settings → MCP Servers** and add a new server entry:
 
 | Field | Value |
 |---|---|
@@ -203,8 +261,6 @@ Open **Settings → MCP Servers** in the OpenCode Desktop interface and add a ne
 | Type | `stdio` |
 | Command | `npx` |
 | Arguments | `-y lumina-ai-vault` |
-
-Alternatively, edit the configuration file directly — same format as OpenCode CLI above.
 
 ---
 
@@ -223,13 +279,13 @@ Edit `~/.codeium/windsurf/mcp_config.json`:
 }
 ```
 
-You can also configure it through the Windsurf interface: **Settings → MCP → Add Server**.
+You can also configure it through **Settings → MCP → Add Server**.
 
 ---
 
 ### Setting a Custom Vault Path
 
-All clients support passing environment variables to the server. Use `AIVAULT_BASE_PATH` to change the default storage location:
+All clients support passing environment variables to the server:
 
 ```json
 {
@@ -247,67 +303,165 @@ All clients support passing environment variables to the server. Use `AIVAULT_BA
 
 ## 💡 Prompt Examples
 
-The following prompts are designed to work directly with the tools exposed by Lumina AI Vault. Paste them into any configured AI assistant.
+The following prompts work directly with the tools exposed by Lumina AI Vault.
 
 ---
 
-### Starting a New Project
+### Saving Session Work (vague prompt)
 
-> Initialize the memory vault for a new project. Use `init_project_memory` with the following details: project name is "nebula-engine", it's a REST API built with Node.js and PostgreSQL, the goal is to provide a real-time data pipeline for IoT devices, and the workspace root is `/home/user/projects/nebula-engine`.
+> Update the memory of the subproject1 project.
+
+The AI will call `load_project_context` to read the current vault state, analyze the conversation, and then call `update_project_memory` with the categorized content:
+
+```
+update_project_memory({
+  project: "subproject1",
+  progress: "## 2026-04-23\n- Implemented feature X\n- Files: src/service.ts, src/client.ts",
+  decisions: "## 2026-04-23\n- Chose approach A over approach B for better performance and maintainability",
+  next_steps: "## Now\n- Write unit tests for feature X\n- Document the integration flow"
+})
+```
+
+Fields written by **appending** (logs — history is never lost):
+- `progress` → `progress.md`
+- `decisions` → `decisions.md`
+
+Fields written by **overwriting** (always reflect the current state):
+- `next_steps` → `next_steps.md`
+- `memory` → `memory.md`
+- `architecture` → `architecture.md`
+- `stack` → `stack.md`
+
+Fields with **configurable mode** (default: append):
+- `custom` → array of `{ filename, content, mode? }` — any `.md` file outside the standard set; `mode: "append"` (default) or `mode: "write"`
+
+---
+
+### Initializing a Top-Level Project
+
+> Initialize the memory vault for a new project. Use `init_project_memory` with: project name "project1", workspace_root "/path/project1", auto_detect true. Then summarize what was detected.
+
+---
+
+### Initializing a Sub-Project
+
+> I'm starting work on the subproject1 module. Use `init_project_memory` with workspace_root "/path/project1/module/subproject1" and project "subproject1". Register it as a sub-project and use the default vault path.
+
+---
+
+### Auto-Detecting the Active Sub-Project
+
+> I'm working in the folder "/path/project1/module/subproject2". Use `load_project_context` with workspace_root "/path/project1/module/subproject2" — the tool should detect which sub-project is active and load its vault automatically.
 
 ---
 
 ### Resuming Work After a Break
 
-> I'm back to work on the "nebula-engine" project. Use `load_project_context` to load the full context from the vault, then summarize: what was the last completed task, what are the next steps, and are there any open architectural decisions?
+> I'm back to work. Use `load_project_context` with workspace_root "/path/project1/module/subproject1" to reload the context for the subproject1 module and summarize: last completed task, next steps, and any open decisions.
 
 ---
 
-### Recording an Architectural Decision
+### Recording an Architectural Decision in a Sub-Project
 
-> We just decided to replace the REST polling pattern with WebSockets for real-time device updates. Use `append_memory` to record this decision in `decisions.md` of the "nebula-engine" project. Include: what was decided, why (lower latency, reduced server load), and what alternatives were rejected (SSE — browser compat issues).
-
----
-
-### Updating Progress
-
-> I just finished implementing the device authentication middleware with JWT. Use `append_memory` to log this in `progress.md` of the "nebula-engine" project with today's date, what was done, and the files changed: `src/middleware/auth.ts` and `src/routes/devices.ts`.
+> We decided to use approach A instead of approach B for subproject1. Use `append_memory` with workspace_root "/path/project1/module/subproject1" and filename "decisions.md". Record: what was decided, why, and what was rejected.
 
 ---
 
-### Searching for Past Decisions
+### Updating Progress in a Sub-Project
 
-> Search the "nebula-engine" vault for the keyword "PostgreSQL" using 4 lines of context. I want to understand what schema decisions we made around the device_events table.
-
----
-
-### Updating Architecture Documentation
-
-> Use `write_memory` to update the `architecture.md` file of the "nebula-engine" project with the following structure: the system has three layers — API Gateway (Express), Business Logic (services), and Data Layer (PostgreSQL + Redis for caching). Include a brief description of each layer's responsibility.
+> I just finished the core service for subproject1. Use `append_memory` with workspace_root "/path/project1/module/subproject1" and filename "progress.md". Include today's date, what was done, and the files changed: `src/service.ts` and `src/client.ts`.
 
 ---
 
-### Running a Health Check
+### Searching Across All Sub-Projects
 
-> Use `health_check` on the "nebula-engine" project to audit its documentation completeness. List any files that are missing or empty, and suggest what content each one should have.
-
----
-
-### Listing and Switching Between Projects
-
-> Use `list_projects` to show all projects in the vault, then load the context of "lumina-web" using `load_project_context`. Compare the next steps of both projects and tell me which one has more urgent pending work.
+> Search the project1 vault for the keyword "authentication" with 3 lines of context. I want to see how each module handles authentication.
 
 ---
 
-### Adding Items to Next Steps
+### Searching Within a Specific Sub-Project
 
-> Use `append_memory` to add three new items to the `next_steps.md` file of the "nebula-engine" project: (1) implement rate limiting on the device endpoints, (2) add integration tests for the WebSocket handlers, (3) document the deployment process in the wiki.
+> Search for "database" in the subproject3 module only. Use `search_memory` with workspace_root "/path/project1/reports/subproject3" and query "database", with 2 lines of context.
 
 ---
 
-### Documenting the Technical Stack
+### Comparing Sub-Projects
 
-> Use `write_memory` to update `stack.md` of the "nebula-engine" project with the following stack: Node.js 20 + TypeScript, Express 5, PostgreSQL 16, Redis 7, Docker + Docker Compose for local development, GitHub Actions for CI/CD.
+> Use `load_project_context` for both "subproject1" and "subproject2" projects. Compare their next steps and tell me which one has more critical pending work.
+
+---
+
+### Health Check Across a Sub-Project
+
+> Use `health_check` with workspace_root "/path/project1/reports/subproject3" to verify if the subproject3 vault is complete. List missing or empty files and suggest what each should contain.
+
+---
+
+### Documenting the Stack for a Sub-Project
+
+> Use `write_memory` with workspace_root "/path/project1/module/subproject1" and filename "stack.md". Document the stack: language and version, main framework, key libraries, database, and testing tools.
+
+---
+
+### Listing All Sub-Projects
+
+> Use `list_projects` to show all vaults in the vault. Then tell me which ones correspond to project1 sub-projects based on their names.
+
+---
+
+### Removing a Sub-Project Registration
+
+> The subproject1 module folder was removed from the repository. Use `unregister_subproject` with workspace_root "/path/project1/module/subproject1" to remove its entry from `.aivault.json`. The vault data at the configured path should not be deleted.
+
+---
+
+### Writing Custom Memory Files
+
+> Use `update_project_memory` with project "subproject1" and the `custom` field to overwrite the API documentation and append to the testing log:
+
+```
+update_project_memory({
+  project: "subproject1",
+  custom: [
+    { filename: "api.md", content: "# REST API\n## Endpoints\n...", mode: "write" },
+    { filename: "testing.md", content: "## 2026-04-23\n- Added unit tests for feature X" }
+  ]
+})
+```
+
+## 🖥️ CLI Reference
+
+The `lumina-aivault` binary exposes configuration commands for managing the global vault path.
+
+### `config set-vault <path>`
+
+Set the global default vault path. Accepts `~`, `$HOME`, and `HOME` shortcuts.
+
+```bash
+lumina-aivault config set-vault ~/.lumina-aivault/knowledge
+lumina-aivault config set-vault HOME/my-vaults
+lumina-aivault config set-vault /absolute/custom/path
+```
+
+### `config get-vault`
+
+Display the currently configured global vault path.
+
+```bash
+lumina-aivault config get-vault
+# Global vault path: /home/user/.lumina-aivault/knowledge
+```
+
+### `config unset-vault`
+
+Remove the global vault configuration and revert to the default path (`~/.lumina-aivault/knowledge`).
+
+```bash
+lumina-aivault config unset-vault
+# Global vault path removed. Using default.
+```
+
+> **Note:** the global vault path set via CLI is read by the MCP server at startup. After changing it, restart the MCP server in your client.
 
 ## 🤝 Contributing
 
