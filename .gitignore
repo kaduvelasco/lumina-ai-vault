@@ -81,12 +81,6 @@ package-lock.json
 # Ferramentas de IA (configs locais, histórico e instruções de agentes)
 # ------------------------------------------------------------------------------
 
-# Arquivos de instrução de agentes IA
-CLAUDE.md
-CODEX.md
-AGENTS.md
-GEMINI.md
-
 # Arquivos de exclusão de contexto para IA
 .aiexclude
 .geminiignore
@@ -124,6 +118,7 @@ aider.conf.yml
 
 # Tabnine
 .tabnine/
+
 
 # ------------------------------------------------------------------------------
 # Credenciais e segurança

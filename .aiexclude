@@ -1,9 +1,9 @@
 # ==============================================================================
-# .aiexclude — LuminaDev AI Shield 
+# .aiexclude — LuminaDev AI Shield
 #
 # Impede que ferramentas de IA (Claude Code, Gemini Code Assist) processem
 # arquivos sensíveis, binários e dados pesados desnecessários.
-# Gerado automaticamente pelo comando 'lumina-git' em cada repositório.
+# Gerado automaticamente pelo comando 'lumina git' em cada repositório.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
