@@ -133,7 +133,9 @@ Only files that are empty or contain the blank template will be written — exis
   async execute(args: z.infer<typeof this.inputSchema>) {
     if (args.auto_detect && !args.workspace_root) {
       return {
-        content: [{ type: "text", text: "Error: workspace_root is required when auto_detect is true." }],
+        content: [
+          { type: "text", text: "Error: workspace_root is required when auto_detect is true." },
+        ],
         isError: true,
       };
     }

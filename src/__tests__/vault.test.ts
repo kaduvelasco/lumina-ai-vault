@@ -2,11 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, writeFile, mkdir, readFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import {
-  readLocalConfig,
-  registerSubProject,
-  unregisterSubProject,
-} from "../vault.js";
+import { readLocalConfig, registerSubProject, unregisterSubProject } from "../vault.js";
 
 async function writeConfig(dir: string, content: object): Promise<void> {
   await writeFile(join(dir, ".aivault.json"), JSON.stringify(content, null, 2));
@@ -172,7 +168,7 @@ describe("registerSubProject", () => {
 
     await registerSubProject(root, "local/caedauth", { project: "caedauth" });
 
-    const config = await readConfig(root) as { subprojects?: Record<string, object> };
+    const config = (await readConfig(root)) as { subprojects?: Record<string, object> };
     expect(config.subprojects).toBeDefined();
     expect(config.subprojects!["local/caedauth"]).toEqual({ project: "caedauth" });
   });
@@ -185,7 +181,7 @@ describe("registerSubProject", () => {
 
     await registerSubProject(root, "local/groupmanager", { project: "groupmanager" });
 
-    const config = await readConfig(root) as { subprojects?: Record<string, object> };
+    const config = (await readConfig(root)) as { subprojects?: Record<string, object> };
     expect(Object.keys(config.subprojects!)).toHaveLength(2);
     expect(config.subprojects!["local/caedauth"]).toEqual({ project: "caedauth" });
     expect(config.subprojects!["local/groupmanager"]).toEqual({ project: "groupmanager" });
@@ -202,7 +198,7 @@ describe("registerSubProject", () => {
       path: "/new/path",
     });
 
-    const config = await readConfig(root) as { subprojects?: Record<string, { path?: string }> };
+    const config = (await readConfig(root)) as { subprojects?: Record<string, { path?: string }> };
     expect(config.subprojects!["local/caedauth"]!.path).toBe("/new/path");
   });
 
@@ -214,7 +210,7 @@ describe("registerSubProject", () => {
 
     await registerSubProject(root, "local/caedauth", { project: "caedauth" });
 
-    const config = await readConfig(root) as { project: string; path: string };
+    const config = (await readConfig(root)) as { project: string; path: string };
     expect(config.project).toBe("moodle-401");
     expect(config.path).toBe("HOME/.lumina-aivault/knowledge");
   });
@@ -242,7 +238,7 @@ describe("unregisterSubProject", () => {
 
     await unregisterSubProject(root, "local/caedauth");
 
-    const config = await readConfig(root) as { subprojects?: Record<string, object> };
+    const config = (await readConfig(root)) as { subprojects?: Record<string, object> };
     expect(config.subprojects!["local/caedauth"]).toBeUndefined();
     expect(config.subprojects!["local/groupmanager"]).toBeDefined();
   });
@@ -255,14 +251,14 @@ describe("unregisterSubProject", () => {
 
     await unregisterSubProject(root, "local/caedauth");
 
-    const config = await readConfig(root) as { subprojects?: unknown };
+    const config = (await readConfig(root)) as { subprojects?: unknown };
     expect(config.subprojects).toBeUndefined();
   });
 
   it("throws when .aivault.json does not exist", async () => {
-    await expect(
-      unregisterSubProject(root, "local/caedauth")
-    ).rejects.toThrow("No .aivault.json found");
+    await expect(unregisterSubProject(root, "local/caedauth")).rejects.toThrow(
+      "No .aivault.json found"
+    );
   });
 
   it("throws when the sub-project key does not exist", async () => {
@@ -271,8 +267,8 @@ describe("unregisterSubProject", () => {
       subprojects: { "local/caedauth": { project: "caedauth" } },
     });
 
-    await expect(
-      unregisterSubProject(root, "local/nonexistent")
-    ).rejects.toThrow('Sub-project "local/nonexistent" not found');
+    await expect(unregisterSubProject(root, "local/nonexistent")).rejects.toThrow(
+      'Sub-project "local/nonexistent" not found'
+    );
   });
 });

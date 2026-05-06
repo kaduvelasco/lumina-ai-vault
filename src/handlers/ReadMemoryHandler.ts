@@ -30,7 +30,9 @@ export class ReadMemoryHandler extends BaseToolHandler<
     workspace_root: z
       .string()
       .optional()
-      .describe("Project folder path. Used to auto-discover .aivault.json when project is omitted."),
+      .describe(
+        "Project folder path. Used to auto-discover .aivault.json when project is omitted."
+      ),
   });
 
   constructor(private basePath: string) {

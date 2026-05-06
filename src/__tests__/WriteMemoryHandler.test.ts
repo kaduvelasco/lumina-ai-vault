@@ -47,4 +47,10 @@ describe("WriteMemoryHandler", () => {
     expect(result.content[0]!.text).toContain("Could not determine");
     expect(vault.writeMemory).not.toHaveBeenCalled();
   });
+
+  it("should reject empty content", () => {
+    expect(() =>
+      handler.validate({ project: "my-project", filename: "test.md", content: "" })
+    ).toThrow();
+  });
 });

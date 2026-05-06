@@ -4,6 +4,7 @@ import * as vault from "../vault.js";
 
 vi.mock("../vault.js", () => ({
   listFiles: vi.fn(),
+  listFilesWithMetadata: vi.fn(),
   readLocalConfig: vi.fn().mockResolvedValue(null),
   resolveBasePath: vi.fn((p: string) => `/resolved${p}`),
 }));
@@ -46,5 +47,29 @@ describe("ListFilesHandler", () => {
 
     expect(result.content[0]!.text).toContain("Could not determine");
     expect(vault.listFiles).not.toHaveBeenCalled();
+  });
+
+  it("should return metadata when metadata=true", async () => {
+    const mockMetadata = [
+      { name: "memory.md", sizeBytes: 512, estimatedTokens: 128, lastModified: "2026-05-01" },
+      { name: "stack.md", sizeBytes: 256, estimatedTokens: 64, lastModified: "2026-04-20" },
+    ];
+    vi.mocked(vault.listFilesWithMetadata).mockResolvedValue(mockMetadata);
+
+    const result = await handler.execute({ project: "my-project", metadata: true });
+
+    expect(vault.listFilesWithMetadata).toHaveBeenCalledWith(basePath, "my-project");
+    expect(vault.listFiles).not.toHaveBeenCalled();
+    expect(result.content[0]!.text).toContain("memory.md");
+    expect(result.content[0]!.text).toContain("~128 tokens");
+    expect(result.content[0]!.text).toContain("2026-05-01");
+  });
+
+  it("should return no-files message when metadata=true and project is empty", async () => {
+    vi.mocked(vault.listFilesWithMetadata).mockResolvedValue([]);
+
+    const result = await handler.execute({ project: "empty-project", metadata: true });
+
+    expect(result.content[0]!.text).toContain('No files found in project "empty-project"');
   });
 });

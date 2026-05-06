@@ -76,9 +76,7 @@ export async function runServer(basePath?: string) {
     resolved = resolveBasePath();
   } else {
     const config = await readGlobalConfig();
-    resolved = config.globalVaultPath
-      ? resolveBasePath(config.globalVaultPath)
-      : resolveBasePath();
+    resolved = config.globalVaultPath ? resolveBasePath(config.globalVaultPath) : resolveBasePath();
   }
 
   const server = createServer(resolved);

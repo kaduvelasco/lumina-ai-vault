@@ -27,7 +27,7 @@ describe("LoadProjectContextHandler", () => {
 
     const result = await handler.execute({ project: "p" });
 
-    expect(vault.loadProjectContext).toHaveBeenCalledWith(basePath, "p");
+    expect(vault.loadProjectContext).toHaveBeenCalledWith(basePath, "p", undefined);
     expect(result.content[0]!.text).toBe("# Context: p\n\nContent");
   });
 
@@ -36,5 +36,22 @@ describe("LoadProjectContextHandler", () => {
 
     expect(result.content[0]!.text).toContain("Could not determine");
     expect(vault.loadProjectContext).not.toHaveBeenCalled();
+  });
+
+  it("should pass files filter to loadProjectContext when provided", async () => {
+    vi.mocked(vault.loadProjectContext).mockResolvedValue("# Context: p\n\nPartial content");
+
+    const result = await handler.execute({ project: "p", files: ["memory.md", "stack.md"] });
+
+    expect(vault.loadProjectContext).toHaveBeenCalledWith(basePath, "p", ["memory.md", "stack.md"]);
+    expect(result.content[0]!.text).toBe("# Context: p\n\nPartial content");
+  });
+
+  it("should pass undefined files when not provided", async () => {
+    vi.mocked(vault.loadProjectContext).mockResolvedValue("# Context: p\n\nFull content");
+
+    await handler.execute({ project: "p" });
+
+    expect(vault.loadProjectContext).toHaveBeenCalledWith(basePath, "p", undefined);
   });
 });

@@ -49,9 +49,7 @@ describe("analyzeProject", () => {
   });
 
   it("should detect React from package.json dependencies", async () => {
-    mockExists.mockImplementation((p: fs.PathLike) =>
-      p.toString().endsWith("package.json")
-    );
+    mockExists.mockImplementation((p: fs.PathLike) => p.toString().endsWith("package.json"));
     mockReadFile.mockResolvedValue(
       JSON.stringify({
         dependencies: { react: "^18.0.0" },
@@ -66,9 +64,7 @@ describe("analyzeProject", () => {
   });
 
   it("should detect Rust from Cargo.toml", async () => {
-    mockExists.mockImplementation((p: fs.PathLike) =>
-      p.toString().endsWith("Cargo.toml")
-    );
+    mockExists.mockImplementation((p: fs.PathLike) => p.toString().endsWith("Cargo.toml"));
     mockReadFile.mockResolvedValue(
       '[package]\nname = "my-crate"\ndescription = "A Rust lib"\n\n[dependencies]\ntokio = "1.0"'
     );
@@ -81,8 +77,9 @@ describe("analyzeProject", () => {
   });
 
   it("should detect Docker infrastructure", async () => {
-    mockExists.mockImplementation((p: fs.PathLike) =>
-      p.toString().endsWith("Dockerfile") || p.toString().endsWith("docker-compose.yml")
+    mockExists.mockImplementation(
+      (p: fs.PathLike) =>
+        p.toString().endsWith("Dockerfile") || p.toString().endsWith("docker-compose.yml")
     );
 
     const result = await analyzeProject("/dockerized");
@@ -107,9 +104,7 @@ describe("analyzeProject", () => {
   });
 
   it("should extract description from README.md", async () => {
-    mockExists.mockImplementation((p: fs.PathLike) =>
-      p.toString().endsWith("README.md")
-    );
+    mockExists.mockImplementation((p: fs.PathLike) => p.toString().endsWith("README.md"));
     mockReadFile.mockResolvedValue("# My App\n\nA tool for managing things.\n\n## Usage\n");
 
     const result = await analyzeProject("/readme-project");

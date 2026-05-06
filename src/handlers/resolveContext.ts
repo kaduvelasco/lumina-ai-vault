@@ -30,7 +30,11 @@ export function contextNote(ctx: ResolvedContext): string {
 
 export async function resolveContext(
   serverBasePath: string,
-  args: { project?: string | undefined; path?: string | undefined; workspace_root?: string | undefined }
+  args: {
+    project?: string | undefined;
+    path?: string | undefined;
+    workspace_root?: string | undefined;
+  }
 ): Promise<ResolvedContext | UnresolvedContext> {
   // Explicit project takes priority
   const projectName = args.project?.trim();
@@ -69,7 +73,11 @@ export async function resolveContext(
 // Like resolveContext but also persists the resolved project as lastProject
 export async function resolveContextAndRemember(
   serverBasePath: string,
-  args: { project?: string | undefined; path?: string | undefined; workspace_root?: string | undefined }
+  args: {
+    project?: string | undefined;
+    path?: string | undefined;
+    workspace_root?: string | undefined;
+  }
 ): Promise<ResolvedContext | UnresolvedContext> {
   const result = await resolveContext(serverBasePath, args);
   if (result.ok) {

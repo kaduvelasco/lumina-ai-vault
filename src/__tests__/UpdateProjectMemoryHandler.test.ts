@@ -68,10 +68,30 @@ describe("UpdateProjectMemoryHandler", () => {
       stack: "# Stack\n## Languages\n- TypeScript",
     });
 
-    expect(vault.writeMemory).toHaveBeenCalledWith(basePath, "my-project", "next_steps.md", "## Now\n- Add tests");
-    expect(vault.writeMemory).toHaveBeenCalledWith(basePath, "my-project", "memory.md", "# Memory\n## Overview\n- Name: my-project");
-    expect(vault.writeMemory).toHaveBeenCalledWith(basePath, "my-project", "architecture.md", "# Architecture\nMicroservices");
-    expect(vault.writeMemory).toHaveBeenCalledWith(basePath, "my-project", "stack.md", "# Stack\n## Languages\n- TypeScript");
+    expect(vault.writeMemory).toHaveBeenCalledWith(
+      basePath,
+      "my-project",
+      "next_steps.md",
+      "## Now\n- Add tests"
+    );
+    expect(vault.writeMemory).toHaveBeenCalledWith(
+      basePath,
+      "my-project",
+      "memory.md",
+      "# Memory\n## Overview\n- Name: my-project"
+    );
+    expect(vault.writeMemory).toHaveBeenCalledWith(
+      basePath,
+      "my-project",
+      "architecture.md",
+      "# Architecture\nMicroservices"
+    );
+    expect(vault.writeMemory).toHaveBeenCalledWith(
+      basePath,
+      "my-project",
+      "stack.md",
+      "# Stack\n## Languages\n- TypeScript"
+    );
     expect(vault.appendMemory).not.toHaveBeenCalled();
   });
 
@@ -102,10 +122,15 @@ describe("UpdateProjectMemoryHandler", () => {
     });
 
     expect(vault.resolveBasePath).toHaveBeenCalledWith("/custom");
-    expect(vault.appendMemory).toHaveBeenCalledWith("/resolved/custom", "my-project", "progress.md", "Done");
+    expect(vault.appendMemory).toHaveBeenCalledWith(
+      "/resolved/custom",
+      "my-project",
+      "progress.md",
+      "Done"
+    );
   });
 
-  it("should report partial errors without failing entirely", async () => {
+  it("should report partial errors and set isError when any operation fails", async () => {
     vi.mocked(vault.appendMemory).mockRejectedValueOnce(new Error("Project not found"));
 
     const result = await handler.execute({
@@ -117,6 +142,6 @@ describe("UpdateProjectMemoryHandler", () => {
     expect(vault.writeMemory).toHaveBeenCalled();
     expect(result.content[0]!.text).toContain("Errors:");
     expect(result.content[0]!.text).toContain("progress.md");
-    expect((result as { isError?: boolean }).isError).toBeFalsy();
+    expect((result as { isError?: boolean }).isError).toBe(true);
   });
 });

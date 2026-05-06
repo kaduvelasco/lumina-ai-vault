@@ -153,7 +153,10 @@ export async function readLocalConfig(workspaceRoot: string): Promise<ResolvedLo
         const raw = await readFile(configPath, "utf-8");
         const parsed = JSON.parse(raw) as LocalVaultConfig;
 
-        if (typeof parsed.project !== "string" || !parsed.project.trim()) return null;
+        if (typeof parsed.project !== "string" || !parsed.project.trim()) {
+          logger.error(`Invalid .aivault.json at ${configPath}: missing or empty "project" field`);
+          return null;
+        }
 
         const relPath = relative(dir, resolve(workspaceRoot)).replace(/\\/g, "/");
 
@@ -194,7 +197,8 @@ export async function readLocalConfig(workspaceRoot: string): Promise<ResolvedLo
         };
         if (parsed.path) result.path = parsed.path;
         return result;
-      } catch {
+      } catch (err) {
+        logger.error(`Failed to read .aivault.json at ${configPath}`, err);
         return null;
       }
     }
@@ -250,8 +254,8 @@ export async function registerSubProject(
   if (existsSync(configPath)) {
     try {
       existing = JSON.parse(await readFile(configPath, "utf-8")) as LocalVaultConfig;
-    } catch {
-      // keep empty default
+    } catch (err) {
+      logger.error(`Failed to read .aivault.json at ${configPath}, will overwrite`, err);
     }
   }
 
@@ -264,7 +268,9 @@ export async function registerSubProject(
   };
 
   await atomicWrite(configPath, JSON.stringify(updated, null, 2));
-  logger.info(`Registered sub-project "${subProject.project}" at key "${subProjectKey}" in ${configPath}`);
+  logger.info(
+    `Registered sub-project "${subProject.project}" at key "${subProjectKey}" in ${configPath}`
+  );
 }
 
 export function resolveBasePath(envPath?: string): string {
@@ -334,6 +340,33 @@ export async function listFiles(basePath: string, project: string): Promise<stri
   if (!existsSync(dir)) throw new Error(`Project not found: "${project}"`);
   const files = await readdir(dir);
   return files.filter((f) => f.endsWith(".md")).sort();
+}
+
+export interface FileMetadata {
+  name: string;
+  sizeBytes: number;
+  estimatedTokens: number;
+  lastModified: string;
+}
+
+export async function listFilesWithMetadata(
+  basePath: string,
+  project: string
+): Promise<FileMetadata[]> {
+  const dir = projectPath(basePath, project);
+  if (!existsSync(dir)) throw new Error(`Project not found: "${project}"`);
+  const files = (await readdir(dir)).filter((f) => f.endsWith(".md")).sort();
+  return Promise.all(
+    files.map(async (name) => {
+      const { size, mtimeMs } = await stat(join(dir, name));
+      return {
+        name,
+        sizeBytes: size,
+        estimatedTokens: Math.round(size / 4),
+        lastModified: new Date(mtimeMs).toISOString().slice(0, 10),
+      };
+    })
+  );
 }
 
 export async function createProject(
@@ -547,8 +580,8 @@ ${toList(answers.nextSteps)}
         try {
           const existing = JSON.parse(await readFile(configPath, "utf-8")) as LocalVaultConfig;
           existingSubprojects = existing.subprojects;
-        } catch {
-          // ignore, will overwrite
+        } catch (err) {
+          logger.error(`Failed to read existing .aivault.json at ${configPath}, will overwrite`, err);
         }
       }
       const configData: LocalVaultConfig = { project, path: originalPath || basePath };
@@ -584,7 +617,8 @@ export async function searchMemory(
   query: string,
   project?: string,
   limit = 100,
-  contextLines = 0
+  contextLines = 0,
+  offset = 0
 ): Promise<SearchOutput> {
   if (!query.trim()) {
     throw new Error("Search query cannot be empty.");
@@ -592,10 +626,13 @@ export async function searchMemory(
   if (limit < 1) {
     throw new Error(`Invalid limit: ${limit}. Must be at least 1.`);
   }
+  if (offset < 0) {
+    throw new Error(`Invalid offset: ${offset}. Must be at least 0.`);
+  }
 
   const results: SearchResult[] = [];
   const lowerQuery = query.toLowerCase();
-  const cap = limit + 1;
+  const cap = offset + limit + 1;
 
   const projects = project ? [project] : await listProjects(basePath);
 
@@ -633,19 +670,28 @@ export async function searchMemory(
     }
   }
 
-  const truncated = results.length === cap;
-  return { results: truncated ? results.slice(0, limit) : results, truncated };
+  const hasMore = results.length === cap;
+  return { results: results.slice(offset, offset + limit), truncated: hasMore };
 }
 
-export async function loadProjectContext(basePath: string, project: string): Promise<string> {
+export async function loadProjectContext(
+  basePath: string,
+  project: string,
+  files?: string[]
+): Promise<string> {
   const dir = projectPath(basePath, project);
   if (!existsSync(dir)) throw new Error(`Project not found: "${project}"`);
 
   const filesRaw = await readdir(dir);
-  const files = filesRaw.filter((f) => f.endsWith(".md")).sort();
+  let candidates = filesRaw.filter((f) => f.endsWith(".md")).sort();
+
+  if (files && files.length > 0) {
+    const validated = new Set(files.map(validateFilename));
+    candidates = candidates.filter((f) => validated.has(f));
+  }
 
   const parts: string[] = [];
-  for (const file of files) {
+  for (const file of candidates) {
     const contentRaw = await readFile(join(dir, file), "utf-8");
     const content = contentRaw.trim();
     const knownTemplate = (MEMORY_TEMPLATES_TRIMMED as Record<string, string | undefined>)[file];

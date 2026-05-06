@@ -16,29 +16,50 @@ export async function runCli(args: string[]): Promise<void> {
         console.error("Usage: lumina-aivault config set-vault <path>");
         process.exit(1);
       }
-      const vaultPath = expandPath(rawPath);
-      const config = await readGlobalConfig();
-      config.globalVaultPath = vaultPath;
-      await writeGlobalConfig(config);
-      console.log(`Global vault path set to: ${vaultPath}`);
+      try {
+        const vaultPath = expandPath(rawPath);
+        const config = await readGlobalConfig();
+        config.globalVaultPath = vaultPath;
+        await writeGlobalConfig(config);
+        console.log(`Global vault path set to: ${vaultPath}`);
+      } catch (err) {
+        console.error(
+          `Failed to set vault path: ${err instanceof Error ? err.message : String(err)}`
+        );
+        process.exit(1);
+      }
       break;
     }
 
     case "get-vault": {
-      const config = await readGlobalConfig();
-      if (config.globalVaultPath) {
-        console.log(`Global vault path: ${config.globalVaultPath}`);
-      } else {
-        console.log("No global vault configured. Using default.");
+      try {
+        const config = await readGlobalConfig();
+        if (config.globalVaultPath) {
+          console.log(`Global vault path: ${config.globalVaultPath}`);
+        } else {
+          console.log("No global vault configured. Using default.");
+        }
+      } catch (err) {
+        console.error(
+          `Failed to read vault config: ${err instanceof Error ? err.message : String(err)}`
+        );
+        process.exit(1);
       }
       break;
     }
 
     case "unset-vault": {
-      const config = await readGlobalConfig();
-      delete config.globalVaultPath;
-      await writeGlobalConfig(config);
-      console.log("Global vault path removed. Using default.");
+      try {
+        const config = await readGlobalConfig();
+        delete config.globalVaultPath;
+        await writeGlobalConfig(config);
+        console.log("Global vault path removed. Using default.");
+      } catch (err) {
+        console.error(
+          `Failed to unset vault path: ${err instanceof Error ? err.message : String(err)}`
+        );
+        process.exit(1);
+      }
       break;
     }
 

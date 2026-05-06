@@ -30,14 +30,14 @@ O **Lumina AI Vault** é um servidor [Model Context Protocol (MCP)](https://mode
 | `list_projects` | Lista todos os projetos gerenciados no vault |
 | `create_project` | Cria um novo projeto com arquivos de memória padrão |
 | `delete_project` | Remove um projeto do vault |
-| `list_files` | Lista os arquivos de memória de um projeto |
+| `list_files` | Lista os arquivos de memória de um projeto; use `metadata=true` para incluir tamanho, tokens estimados e data de modificação |
 | `init_project_memory` | Inicialização guiada de um projeto ou sub-projeto |
 | `read_memory` | Lê um arquivo de memória |
 | `write_memory` | Sobrescreve um arquivo de memória |
 | `append_memory` | Adiciona entradas a um arquivo sem sobrescrever |
 | `delete_memory` | Remove um arquivo de memória customizado |
 | `search_memory` | Busca em todo o vault com suporte a linhas de contexto |
-| `load_project_context` | Consolida o estado completo de um projeto em um único bloco |
+| `load_project_context` | Consolida a memória do projeto em um único bloco; use `files` para carregar apenas arquivos específicos |
 | `health_check` | Audita a completude da memória de um projeto |
 | `get_vault_config` | Exibe a configuração atual do vault e as configurações globais |
 | `update_project_memory` | Salva o trabalho da sessão no vault em uma única chamada (progresso, decisões, próximos passos, etc.) |
@@ -135,6 +135,14 @@ Para armazenar o vault do sub-projeto em um local customizado, passe o argumento
 | Atalhos de caminho | Use `~`, `$HOME` ou `HOME` no início de qualquer caminho |
 
 Localização padrão: `~/.lumina-aivault/knowledge`
+
+## 🌐 Variáveis de Ambiente
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `AIVAULT_BASE_PATH` | `~/.lumina-aivault/knowledge` | Sobrescreve o caminho padrão de armazenamento do vault. Suporta os atalhos `~`, `$HOME` e `HOME`. |
+
+Veja o arquivo [`.env.example`](.env.example) para um template comentado.
 
 ## 📦 Instalação
 

@@ -30,14 +30,14 @@
 | `list_projects` | List all projects managed in the vault |
 | `create_project` | Create a new project with standard memory files |
 | `delete_project` | Remove a project from the vault |
-| `list_files` | List memory files within a project |
+| `list_files` | List memory files within a project; use `metadata=true` to include size, estimated tokens, and last modified date |
 | `init_project_memory` | Guided initialization of a project or sub-project knowledge base |
 | `read_memory` | Read a memory file |
 | `write_memory` | Overwrite a memory file |
 | `append_memory` | Append entries to a file without overwriting |
 | `delete_memory` | Delete a custom memory file |
 | `search_memory` | Search across the vault with context line support |
-| `load_project_context` | Consolidate a full project state into a single context block |
+| `load_project_context` | Consolidate project memory into a single context block; use `files` to load only specific files |
 | `health_check` | Audit project memory completeness |
 | `get_vault_config` | Show current vault configuration and global settings |
 | `update_project_memory` | Save session work to the vault in a single call (progress, decisions, next steps, etc.) |
@@ -135,6 +135,14 @@ To store the sub-project vault at a custom location, pass the `path` argument ex
 | Shortcut support | Use `~`, `$HOME`, or `HOME` at the start of any path |
 
 Default storage location: `~/.lumina-aivault/knowledge`
+
+## 🌐 Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `AIVAULT_BASE_PATH` | `~/.lumina-aivault/knowledge` | Override the default vault storage path. Supports `~`, `$HOME`, and `HOME` shortcuts. |
+
+See [`.env.example`](.env.example) for a commented template.
 
 ## 📦 Installation
 

@@ -33,7 +33,9 @@ export class AppendMemoryHandler extends BaseToolHandler<
     workspace_root: z
       .string()
       .optional()
-      .describe("Project folder path. Used to auto-discover .aivault.json when project is omitted."),
+      .describe(
+        "Project folder path. Used to auto-discover .aivault.json when project is omitted."
+      ),
   });
 
   constructor(private basePath: string) {
@@ -46,7 +48,9 @@ export class AppendMemoryHandler extends BaseToolHandler<
 
     await appendMemory(ctx.basePath, ctx.project, args.filename, args.content);
     return {
-      content: [{ type: "text", text: `Appended to: ${ctx.project}/${args.filename}${contextNote(ctx)}` }],
+      content: [
+        { type: "text", text: `Appended to: ${ctx.project}/${args.filename}${contextNote(ctx)}` },
+      ],
     };
   }
 }

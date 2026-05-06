@@ -27,7 +27,9 @@ export class DeleteMemoryHandler extends BaseToolHandler<
     workspace_root: z
       .string()
       .optional()
-      .describe("Project folder path. Used to auto-discover .aivault.json when project is omitted."),
+      .describe(
+        "Project folder path. Used to auto-discover .aivault.json when project is omitted."
+      ),
   });
 
   constructor(private basePath: string) {
@@ -40,7 +42,9 @@ export class DeleteMemoryHandler extends BaseToolHandler<
 
     await deleteMemory(ctx.basePath, ctx.project, args.filename);
     return {
-      content: [{ type: "text", text: `Deleted: ${ctx.project}/${args.filename}${contextNote(ctx)}` }],
+      content: [
+        { type: "text", text: `Deleted: ${ctx.project}/${args.filename}${contextNote(ctx)}` },
+      ],
     };
   }
 }

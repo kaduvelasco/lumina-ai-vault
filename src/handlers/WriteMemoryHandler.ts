@@ -27,12 +27,14 @@ export class WriteMemoryHandler extends BaseToolHandler<
       .string()
       .min(1)
       .describe(`File to write. Standard files: ${MEMORY_FILES.join(", ")}`),
-    content: z.string().describe("New full content of the file"),
+    content: z.string().min(1).describe("New full content of the file (must not be empty)"),
     path: z.string().optional().describe(PATH_DESCRIPTION),
     workspace_root: z
       .string()
       .optional()
-      .describe("Project folder path. Used to auto-discover .aivault.json when project is omitted."),
+      .describe(
+        "Project folder path. Used to auto-discover .aivault.json when project is omitted."
+      ),
   });
 
   constructor(private basePath: string) {
@@ -45,7 +47,9 @@ export class WriteMemoryHandler extends BaseToolHandler<
 
     await writeMemory(ctx.basePath, ctx.project, args.filename, args.content);
     return {
-      content: [{ type: "text", text: `Written: ${ctx.project}/${args.filename}${contextNote(ctx)}` }],
+      content: [
+        { type: "text", text: `Written: ${ctx.project}/${args.filename}${contextNote(ctx)}` },
+      ],
     };
   }
 }

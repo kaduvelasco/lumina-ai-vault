@@ -10,6 +10,7 @@ export class SearchMemoryHandler extends BaseToolHandler<
     project: z.ZodOptional<z.ZodString>;
     limit: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
     context_lines: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
+    offset: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
     path: z.ZodOptional<z.ZodString>;
     workspace_root: z.ZodOptional<z.ZodString>;
   }>
@@ -17,7 +18,7 @@ export class SearchMemoryHandler extends BaseToolHandler<
   public readonly name = "search_memory";
   public readonly description = `Search for a text string across all memory files in the vault, or within a specific project.
 Results are returned as: project/file:lineNumber  matched text
-Accepts optional parameters for limit and context_lines.`;
+Accepts optional parameters for limit, context_lines, and offset (for pagination).`;
   public readonly inputSchema = z.object({
     query: z.string().min(1).describe("Text to search for (case-insensitive, cannot be empty)"),
     project: z
@@ -28,14 +29,24 @@ Accepts optional parameters for limit and context_lines.`;
       ),
     limit: z
       .number()
+      .int()
+      .min(1)
+      .max(1000)
       .optional()
       .default(100)
-      .describe("Maximum number of results to return (default: 100)"),
+      .describe("Maximum number of results to return (default: 100, max: 1000)"),
     context_lines: z
       .number()
       .optional()
       .default(0)
       .describe("Number of context lines to show around each match (default: 0)"),
+    offset: z
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .default(0)
+      .describe("Number of results to skip for pagination (default: 0)"),
     path: z.string().optional().describe(PATH_DESCRIPTION),
     workspace_root: z
       .string()
@@ -62,10 +73,6 @@ Accepts optional parameters for limit and context_lines.`;
       if (ctx.ok) {
         project = ctx.project;
         basePath = ctx.basePath;
-        await resolveContextAndRemember(this.basePath, {
-          project: ctx.project,
-          path: args.path,
-        });
       }
     } else if (args.path) {
       basePath = resolveBasePath(args.path);
@@ -80,7 +87,8 @@ Accepts optional parameters for limit and context_lines.`;
       args.query,
       project,
       args.limit,
-      args.context_lines
+      args.context_lines,
+      args.offset
     );
 
     if (results.length === 0) {
@@ -97,7 +105,7 @@ Accepts optional parameters for limit and context_lines.`;
       return output;
     });
 
-    if (truncated) lines.push(`(limit of ${args.limit} results reached)`);
+    if (truncated) lines.push(`(limit of ${args.limit} results reached, use offset to paginate)`);
 
     return {
       content: [{ type: "text", text: lines.join("\n") }],

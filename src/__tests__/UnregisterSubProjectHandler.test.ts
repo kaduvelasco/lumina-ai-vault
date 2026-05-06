@@ -31,10 +31,7 @@ describe("UnregisterSubProjectHandler", () => {
       workspace_root: "/mdle/dev/401/local/caedauth",
     });
 
-    expect(vault.unregisterSubProject).toHaveBeenCalledWith(
-      "/mdle/dev/401",
-      "local/caedauth"
-    );
+    expect(vault.unregisterSubProject).toHaveBeenCalledWith("/mdle/dev/401", "local/caedauth");
     expect(result.content[0]!.text).toContain("local/caedauth");
     expect(result.content[0]!.text).toContain("removed");
   });
@@ -46,10 +43,7 @@ describe("UnregisterSubProjectHandler", () => {
     });
 
     expect(vault.readLocalConfig).not.toHaveBeenCalled();
-    expect(vault.unregisterSubProject).toHaveBeenCalledWith(
-      "/mdle/dev/401",
-      "local/groupmanager"
-    );
+    expect(vault.unregisterSubProject).toHaveBeenCalledWith("/mdle/dev/401", "local/groupmanager");
     expect(result.content[0]!.text).toContain("local/groupmanager");
   });
 

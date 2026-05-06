@@ -10,10 +10,6 @@ interface PackageJson {
   devDependencies?: Record<string, string>;
 }
 
-interface CargoToml {
-  package?: { description?: string };
-}
-
 const FRAMEWORK_MAP: Record<string, string> = {
   react: "React",
   next: "Next.js",
@@ -62,10 +58,7 @@ async function tryReadFile(path: string): Promise<string | null> {
   }
 }
 
-async function detectFromPackageJson(
-  workspaceRoot: string,
-  answers: InitAnswers
-): Promise<void> {
+async function detectFromPackageJson(workspaceRoot: string, answers: InitAnswers): Promise<void> {
   const raw = await tryReadFile(join(workspaceRoot, "package.json"));
   if (!raw) return;
 
@@ -83,8 +76,7 @@ async function detectFromPackageJson(
   const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
   const languages: string[] = [];
 
-  const hasTypeScript =
-    "typescript" in allDeps || existsSync(join(workspaceRoot, "tsconfig.json"));
+  const hasTypeScript = "typescript" in allDeps || existsSync(join(workspaceRoot, "tsconfig.json"));
   languages.push(hasTypeScript ? "TypeScript" : "JavaScript");
 
   const frameworks: string[] = [];
@@ -178,7 +170,7 @@ async function detectFromPython(workspaceRoot: string, answers: InitAnswers): Pr
         fastapi: "FastAPI",
         django: "Django",
         flask: "Flask",
-        "starlette": "Starlette",
+        starlette: "Starlette",
         pydantic: "Pydantic",
         sqlalchemy: "SQLAlchemy",
       };
@@ -246,6 +238,16 @@ async function detectInfrastructure(workspaceRoot: string, answers: InitAnswers)
   if (existsSync(join(workspaceRoot, ".gitlab-ci.yml"))) infra.push("GitLab CI");
   if (existsSync(join(workspaceRoot, "Pulumi.yaml"))) infra.push("Pulumi");
 
+  // Monorepo tooling detection
+  if (existsSync(join(workspaceRoot, "turbo.json"))) infra.push("Turborepo");
+  if (existsSync(join(workspaceRoot, "nx.json"))) infra.push("Nx");
+  if (existsSync(join(workspaceRoot, "lerna.json"))) infra.push("Lerna");
+  if (
+    existsSync(join(workspaceRoot, "pnpm-workspace.yaml")) ||
+    existsSync(join(workspaceRoot, "pnpm-workspace.yml"))
+  )
+    infra.push("pnpm workspaces");
+
   if (!answers.infrastructure && infra.length > 0) {
     answers.infrastructure = infra.join(", ");
   }
@@ -254,6 +256,26 @@ async function detectInfrastructure(workspaceRoot: string, answers: InitAnswers)
 async function detectComponents(workspaceRoot: string, answers: InitAnswers): Promise<void> {
   if (answers.components) return;
   try {
+    // For monorepos, list actual packages instead of generic top-level dirs
+    const monorepoPackageDirs = ["packages", "apps", "libs", "modules"];
+    const monorepoPackages: string[] = [];
+
+    for (const dir of monorepoPackageDirs) {
+      const fullPath = join(workspaceRoot, dir);
+      if (!existsSync(fullPath)) continue;
+      const entries = await readdir(fullPath, { withFileTypes: true });
+      const pkgs = entries
+        .filter((e) => e.isDirectory() && !SKIP_DIRS.has(e.name) && !e.name.startsWith("."))
+        .map((e) => `${dir}/${e.name}`);
+      monorepoPackages.push(...pkgs);
+    }
+
+    if (monorepoPackages.length > 0 && monorepoPackages.length <= 20) {
+      answers.components = monorepoPackages.join(", ");
+      return;
+    }
+
+    // Fallback: list top-level directories
     const entries = await readdir(workspaceRoot, { withFileTypes: true });
     const dirs = entries
       .filter((e) => e.isDirectory() && !SKIP_DIRS.has(e.name) && !e.name.startsWith("."))

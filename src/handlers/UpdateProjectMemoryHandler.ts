@@ -88,12 +88,16 @@ FORMAT GUIDANCE:
     workspace_root: z
       .string()
       .optional()
-      .describe("Project folder path. Used to auto-discover .aivault.json when project is omitted."),
+      .describe(
+        "Project folder path. Used to auto-discover .aivault.json when project is omitted."
+      ),
     path: z.string().optional().describe(PATH_DESCRIPTION),
     progress: z
       .string()
       .optional()
-      .describe("Work completed in this session. APPENDED to progress.md. Include date and summary."),
+      .describe(
+        "Work completed in this session. APPENDED to progress.md. Include date and summary."
+      ),
     decisions: z
       .string()
       .optional()
@@ -103,7 +107,9 @@ FORMAT GUIDANCE:
     next_steps: z
       .string()
       .optional()
-      .describe("Current list of upcoming tasks. OVERWRITES next_steps.md with the full updated content."),
+      .describe(
+        "Current list of upcoming tasks. OVERWRITES next_steps.md with the full updated content."
+      ),
     memory: z
       .string()
       .optional()
@@ -135,10 +141,16 @@ FORMAT GUIDANCE:
   }
 
   async execute(args: z.infer<typeof this.inputSchema>) {
-    const standardFields = ["progress", "decisions", "next_steps", "memory", "architecture", "stack"] as const;
+    const standardFields = [
+      "progress",
+      "decisions",
+      "next_steps",
+      "memory",
+      "architecture",
+      "stack",
+    ] as const;
     const hasContent =
-      standardFields.some((f) => args[f] !== undefined) ||
-      (args.custom && args.custom.length > 0);
+      standardFields.some((f) => args[f] !== undefined) || (args.custom && args.custom.length > 0);
 
     if (!hasContent) {
       return {
@@ -206,7 +218,7 @@ FORMAT GUIDANCE:
 
     return {
       content: [{ type: "text", text: parts.join("\n") }],
-      isError: errors.length > 0 && appended.length === 0 && written.length === 0,
+      isError: errors.length > 0,
     };
   }
 }
