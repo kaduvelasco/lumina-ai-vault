@@ -33,7 +33,7 @@ export class LoadProjectContextHandler extends BaseToolHandler<
       .array(z.string())
       .optional()
       .describe(
-        "Optional list of specific filenames to load (e.g. [\"memory.md\", \"stack.md\"]). When omitted, all non-empty files are loaded."
+        'Optional list of specific filenames to load (e.g. ["memory.md", "stack.md"]). When omitted, all non-empty files are loaded.'
       ),
   });
 

@@ -581,7 +581,10 @@ ${toList(answers.nextSteps)}
           const existing = JSON.parse(await readFile(configPath, "utf-8")) as LocalVaultConfig;
           existingSubprojects = existing.subprojects;
         } catch (err) {
-          logger.error(`Failed to read existing .aivault.json at ${configPath}, will overwrite`, err);
+          logger.error(
+            `Failed to read existing .aivault.json at ${configPath}, will overwrite`,
+            err
+          );
         }
       }
       const configData: LocalVaultConfig = { project, path: originalPath || basePath };

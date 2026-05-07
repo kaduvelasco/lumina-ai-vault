@@ -33,7 +33,9 @@ export class ListFilesHandler extends BaseToolHandler<
     metadata: z
       .boolean()
       .optional()
-      .describe("When true, include size in bytes, estimated tokens, and last modified date for each file."),
+      .describe(
+        "When true, include size in bytes, estimated tokens, and last modified date for each file."
+      ),
   });
 
   constructor(private basePath: string) {
@@ -49,7 +51,10 @@ export class ListFilesHandler extends BaseToolHandler<
       const text =
         files.length > 0
           ? `Files in "${ctx.project}"${contextNote(ctx)}:\n${files
-              .map((f) => `- ${f.name}  (${f.sizeBytes}B, ~${f.estimatedTokens} tokens, modified: ${f.lastModified})`)
+              .map(
+                (f) =>
+                  `- ${f.name}  (${f.sizeBytes}B, ~${f.estimatedTokens} tokens, modified: ${f.lastModified})`
+              )
               .join("\n")}`
           : `No files found in project "${ctx.project}".`;
       return { content: [{ type: "text", text }] };
