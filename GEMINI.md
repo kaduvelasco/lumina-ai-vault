@@ -165,4 +165,4 @@ If a subtask turns out to need more capability than its assigned model, the suba
 
 ## Language-Specific Standards
 
-@instructions/MCP.md
+@.instructions/MCP.md

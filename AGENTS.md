@@ -141,4 +141,4 @@ If a task appears to require sensitive information, **ask the user instead of ge
 
 ## Language-Specific Standards
 
-@instructions/MCP.md
+@.instructions/MCP.md
