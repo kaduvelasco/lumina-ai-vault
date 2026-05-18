@@ -9,6 +9,12 @@
 
 📄 Portuguese version: see [LEIAME.md](LEIAME.md)
 
+> **Deprecated / Descontinuado**
+>
+> **EN:** This project will be discontinued. The new version can be found at https://github.com/kaduvelasco/lumina-vault
+>
+> **PT-BR:** Este projeto será descontinuado. A nova versão pode ser encontrada em https://github.com/kaduvelasco/lumina-vault
+
 **Lumina AI Vault** is a high-performance [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that acts as a **structured, persistent memory** for AI assistants during software development. It enables AI models to maintain long-term memory of project goals, architectural decisions, technical stack, and progress across multiple sessions — with full support for **sub-projects** (plugins, packages, modules) within a single repository.
 
 ## 🚀 Features
